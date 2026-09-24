@@ -23,12 +23,14 @@ import android.window.OnBackInvokedDispatcher;
 import com.yamone.arcade2.core.GameId;
 import com.yamone.arcade2.core.OrbitEngine;
 import com.yamone.arcade2.core.ColorBreakEngine;
+import com.yamone.arcade2.core.TwinTapEngine;
 import com.yamone.arcade2.data.LocalStore;
 import com.yamone.arcade2.data.RankingGateway;
 import com.yamone.arcade2.ui.BannerSlot;
 import com.yamone.arcade2.ui.OrbitView;
 import com.yamone.arcade2.ui.GameView;
 import com.yamone.arcade2.ui.ColorBreakView;
+import com.yamone.arcade2.ui.TwinTapView;
 import java.util.UUID;
 
 public final class MainActivity extends Activity {
@@ -97,9 +99,11 @@ public final class MainActivity extends Activity {
         }
     }
     private void instructions(GameId game) {
-        String hint = game == GameId.COLOR_BREAK
-            ? "1. 화면 왼쪽 / 오른쪽을 탭해 이동해요.\n2. 아래에서 올라오는 벽 중 내 공과 같은 색·숫자로 통과하세요.\n3. 연속 성공하면 콤보 보너스!\n\n벽이 바뀔 때 내 공 색도 바뀌어요. 통과 +100점, 콤보 보너스 최대 +100점. 3번 실수하거나 60초가 지나면 종료됩니다."
-            : "1. 화면을 꾹 누르면 점이 원을 돌아요.\n2. 민트 구간에 들어오면 손을 떼세요.\n3. 정확히 맞추면 +150점, 통과하면 +100점!\n\n한 궤도에서 너무 오래 머물면 기회가 줄어요. 3번 실수하거나 60초가 지나면 종료됩니다.";
+        String hint = switch (game) {
+            case COLOR_BREAK -> "1. 화면 왼쪽 / 오른쪽을 탭해 이동해요.\n2. 아래에서 올라오는 벽 중 내 공과 같은 색·숫자로 통과하세요.\n3. 연속 성공하면 콤보 보너스!\n\n벽이 바뀔 때 내 공 색도 바뀌어요. 통과 +100점, 콤보 보너스 최대 +100점. 3번 실수하거나 60초가 지나면 종료됩니다.";
+            case TWIN_TAP -> "1. 점이 아래 판정선에 닿을 때 해당 레인을 탭해요.\n2. 점이 1개면 한쪽, 2개면 양쪽을 함께 누르세요.\n3. 정확할수록 점수가 높고 연속 성공하면 콤보 보너스!\n\n한 손가락을 번갈아 쓰거나 두 손가락을 동시에 사용할 수 있어요. 5번 놓치거나 60초가 지나면 종료됩니다.";
+            default -> "1. 화면을 꾹 누르면 점이 원을 돌아요.\n2. 민트 구간에 들어오면 손을 떼세요.\n3. 정확히 맞추면 +150점, 통과하면 +100점!\n\n한 궤도에서 너무 오래 머물면 기회가 줄어요. 3번 실수하거나 60초가 지나면 종료됩니다.";
+        };
         new AlertDialog.Builder(this).setTitle(game.title).setMessage(hint)
             .setPositiveButton("시작", (d, w) -> startGame(game)).setNegativeButton("닫기", null).show();
     }
@@ -118,6 +122,10 @@ public final class MainActivity extends Activity {
             gameView = new ColorBreakView(this, new ColorBreakEngine(System.nanoTime()), store.haptics(), engine ->
                 result(currentRun, game, engine.score(), engine.remaining() == 0,
                     "벽 통과 " + engine.passed() + "회   ·   최고 콤보 " + engine.bestCombo() + "회"));
+        } else if (game == GameId.TWIN_TAP) {
+            gameView = new TwinTapView(this, new TwinTapEngine(System.nanoTime()), store.haptics(), engine ->
+                result(currentRun, game, engine.score(), engine.remaining() == 0,
+                    "성공 " + engine.hits() + "회   ·   동시 성공 " + engine.simultaneousHits() + "회   ·   최고 콤보 " + engine.bestCombo() + "회"));
         } else {
             gameView = new OrbitView(this, new OrbitEngine(System.nanoTime()), store.haptics(), engine ->
                 result(currentRun, game, engine.score(), engine.remaining() == 0,

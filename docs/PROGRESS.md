@@ -1,13 +1,13 @@
 # Development progress
 
-Current stage: **M02 / v0.2.0**. Repository is the source of truth for subsequent hourly runs.
+Current stage: **M03 / v0.3.0**. Repository is the source of truth for subsequent hourly runs.
 
 | Milestone | Scope | State |
 |---|---|---|
 | M01 | Android shell + Orbit Snap + local records + test banner + ranking boundary | complete; core checks, lint and debug APK passed |
 | M02 | Color Break | complete; 33 core checks, Android lint and debug APK passed |
-| M03 | Twin Tap, true multi-touch | next |
-| M04 | Line Surf | pending |
+| M03 | Twin Tap, true multi-touch | implemented; 52 core checks passed; Android CI pending |
+| M04 | Line Surf | next |
 | M05 | Pocket Pulse | pending |
 | M06 | Stack Slice | pending |
 | M07 | Integration, lifecycle/aspect ratios, debug APK QA | pending |
@@ -38,9 +38,17 @@ GitHub Actions run **36019168249**, exact code commit **301d143fbaee1fd88ab415b2
 
 No device/emulator play, installed APK, real touch, persistence across process restarts or actual test-ad impression is claimed. Git HTTPS push had no terminal credentials, so the connected GitHub API published the identical verified source tree with a non-forced fast-forward update; local main was restored from that remote commit while keeping the original local commit on a checkpoint branch.
 
+## M03 implemented and validation
+
+2026-09-25: Native Twin Tap engine/View, two descending lanes, deterministic single/double notes, genuine pointer-ID multi-touch, ±180ms timing and ±55ms PERFECT windows, combo scoring, five lives, 60-second cutoff, gradual acceleration, pause of partially completed chords, result/retry and per-game records. Each Android `DOWN`/`POINTER_DOWN` is consumed once; move/hold cannot repeat a hit.
+
+`bash scripts/test-core.sh`: **52 checks passed** (33 prior checks + 19 Twin Tap/catalog checks). Coverage includes explicit start, ignored early input, exact single PERFECT, duplicate suppression, wrong-lane failure, deterministic double notes, distinct-lane chord completion across two inputs, pause/resume during a partial chord, exact late miss, five-miss termination, terminal input, perfect 60-second completion, acceleration bounds, 60/120Hz and delayed-frame consistency, invalid deltas and unlock scope. `git diff --check` passed.
+
+Local Android lint/APK verification is unavailable because this environment has no Gradle or Android SDK. GitHub Actions for the exact M03 code commit must pass before Android validation is complete. No device/emulator play, installed APK, physical multi-touch, screen-ratio QA or actual test-ad impression is claimed.
+
 ## Known limits / next
 
-- M03: implement Twin Tap with genuine multi-pointer handling, simultaneous-note judgement and timing-window regression tests; reuse the shared shell and preserve both playable games.
+- M04: implement Line Surf hold-to-ride/release-to-jump mechanics, gaps/obstacles, distance score and deterministic collision regression tests; preserve all three playable games.
 - M07: Activity recreation currently returns home and loses an unfinished round; add proper saved state or a clearly designed abandonment flow before release. Rotation/tablet/landscape rendering not manually verified.
 - Canvas visual/game feel and actual test ad rendering still require emulator/device QA.
 - Gradle wrapper is not yet committed; CI installs exact Gradle 8.11.1. Add standard wrapper in an environment with Gradle.

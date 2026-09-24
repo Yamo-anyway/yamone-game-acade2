@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 — 2026-09-25
+
+- Add playable Twin Tap with two descending lanes, single/double notes, timing windows, PERFECT/HIT scoring, combo bonus, five lives and 60-second rounds.
+- Track Android pointer IDs and consume each `DOWN`/`POINTER_DOWN` once, supporting genuine two-finger chords without move/hold repeats.
+- Add fitted native Canvas board, pressed-lane feedback, partial chord display, pause/resume, retry/result routing and per-game local records.
+- Add 19 Twin Tap/catalog regression checks (52 total), covering split multi-touch chords, duplicate/wrong/early/late input, partial-chord pause, exact round end, frame-rate and delayed-frame consistency.
+- Local Java checks and whitespace validation passed. Local Android build unavailable (Gradle/SDK absent); exact-commit CI verification is recorded in PROGRESS.
+- Device multi-touch feel, layout and actual test-ad display remain unverified; no production ads or ranking server connected.
+
 ## 0.2.0 — 2026-09-24
 
 - Add playable Color Break: two-lane tap control, rising color/number walls, combo bonus, three lives, 60-second limit and increasing speed.

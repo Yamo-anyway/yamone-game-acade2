@@ -1,6 +1,7 @@
 import com.yamone.arcade2.core.GameId;
 import com.yamone.arcade2.core.OrbitEngine;
 import com.yamone.arcade2.core.ColorBreakEngine;
+import com.yamone.arcade2.core.TwinTapEngine;
 import com.yamone.arcade2.data.RankingGateway;
 
 public final class CoreTests {
@@ -50,6 +51,7 @@ public final class CoreTests {
         check(disabled.submit(new RankingGateway.ScoreSubmission("run", "local", "player", GameId.ORBIT_SNAP, 1, 100, 77)) == RankingGateway.Status.NOT_CONNECTED, "server submission disabled");
         check(GameId.values().length == 6, "catalog contains all six approved concepts");
         colorBreakTests();
+        twinTapTests();
         System.out.println("All " + passed + " core checks passed.");
     }
     private static int matchingLane(ColorBreakEngine e) { return e.laneColor(0) == e.targetColor() ? 0 : 1; }
@@ -106,6 +108,81 @@ public final class CoreTests {
         check(large.score() == a.score() && large.lives() == a.lives() && large.feedbackId() == a.feedbackId(), "color delayed frame cannot skip wall collision");
         at = ready.elapsed(); ready.tapLane(0); ready.advance(Double.NaN); ready.advance(Double.POSITIVE_INFINITY); ready.advance(-1); ready.advance(0);
         check(ready.elapsed() == at, "color invalid time deltas ignored");
-        check(GameId.ORBIT_SNAP.ready && GameId.COLOR_BREAK.ready && !GameId.TWIN_TAP.ready, "only implemented games unlocked");
+        check(GameId.ORBIT_SNAP.ready && GameId.COLOR_BREAK.ready && GameId.TWIN_TAP.ready && !GameId.LINE_SURF.ready, "only implemented games unlocked");
+    }
+    private static void twinHit(TwinTapEngine e) {
+        double wait = e.targetOffset();
+        if (wait > 0) e.advance(wait);
+        int mask = e.noteMask();
+        if ((mask & 1) != 0) e.tapLane(0);
+        if ((mask & 2) != 0) e.tapLane(1);
+    }
+    private static void twinTapTests() {
+        TwinTapEngine e = new TwinTapEngine(77);
+        e.advance(5); e.tapLane(-1); e.tapLane(2);
+        check(e.state() == TwinTapEngine.State.READY && e.elapsed() == 0, "twin clock waits for explicit start");
+        e.start(); e.tapLane(e.noteMask() == 1 ? 0 : 1);
+        check(e.score() == 0 && e.lives() == 5 && e.tappedMask() == 0, "twin very early tap is ignored");
+        twinHit(e);
+        check(e.score() == 150 && e.hits() == 1 && e.perfects() == 1 && e.combo() == 1, "twin exact single tap awards perfect");
+        int score = e.score(), serial = e.noteSerial();
+        e.tapLane(0); e.tapLane(1);
+        check(e.score() == score && e.noteSerial() == serial, "twin taps outside window cannot duplicate score");
+
+        TwinTapEngine wrong = new TwinTapEngine(7); wrong.start(); wrong.advance(wrong.targetOffset());
+        int required = wrong.noteMask(); wrong.tapLane(required == 1 ? 1 : 0);
+        check(wrong.lives() == 4 && wrong.score() == 0 && wrong.combo() == 0 && wrong.feedback() == TwinTapEngine.Feedback.MISS, "twin wrong lane costs one life");
+
+        TwinTapEngine chord = new TwinTapEngine(77); chord.start();
+        int watchdog = 30;
+        while (chord.noteMask() != 3 && watchdog-- > 0) twinHit(chord);
+        check(watchdog > 0 && chord.noteMask() == 3, "twin deterministic sequence includes double notes");
+        int beforeScore = chord.score(), beforeHits = chord.hits(), beforeCombo = chord.combo();
+        chord.advance(Math.max(0, chord.targetOffset() - .1)); chord.tapLane(0); chord.tapLane(0);
+        check(chord.tappedMask() == 1 && chord.hits() == beforeHits, "twin chord waits for distinct second pointer");
+        chord.advance(.15); chord.tapLane(1);
+        int expectedChord = 200 + Math.min(100, beforeCombo * 10);
+        check(chord.score() == beforeScore + expectedChord && chord.hits() == beforeHits + 1
+            && chord.simultaneousHits() == 1 && chord.feedback() == TwinTapEngine.Feedback.HIT, "twin split multi-touch chord scores once within window");
+
+        TwinTapEngine partial = new TwinTapEngine(5); partial.start();
+        while (partial.noteMask() != 3) twinHit(partial);
+        partial.advance(partial.targetOffset()); partial.tapLane(0);
+        double at = partial.elapsed(), offset = partial.targetOffset(); int tapped = partial.tappedMask();
+        partial.pause(); partial.advance(99); partial.tapLane(1);
+        check(partial.elapsed() == at && partial.targetOffset() == offset && partial.tappedMask() == tapped, "twin pause freezes partial chord and input");
+        partial.resume(); partial.tapLane(1);
+        check(partial.hits() > 0 && partial.lives() == 5, "twin resume can complete pending chord");
+
+        TwinTapEngine late = new TwinTapEngine(3); late.start();
+        late.advance(late.targetOffset() + TwinTapEngine.HIT_WINDOW);
+        check(late.lives() == 4 && late.feedback() == TwinTapEngine.Feedback.MISS && late.noteSerial() == 1, "twin late note misses exactly at deadline");
+        TwinTapEngine ready = new TwinTapEngine(9); ready.pause(); ready.resume(); ready.advance(9);
+        check(ready.state() == TwinTapEngine.State.READY && ready.elapsed() == 0, "twin pause before start preserves ready state");
+
+        TwinTapEngine failed = new TwinTapEngine(11); failed.start(); failed.advance(99);
+        check(failed.state() == TwinTapEngine.State.FINISHED && failed.lives() == 0 && failed.score() == 0, "twin five unattended notes finish round without passive score");
+        at = failed.elapsed(); failed.start(); failed.tapLane(0); failed.advance(100);
+        check(failed.elapsed() == at && failed.score() == 0 && failed.state() == TwinTapEngine.State.FINISHED, "twin finished state rejects input and time");
+
+        TwinTapEngine clock = new TwinTapEngine(13); clock.start();
+        while (clock.state() != TwinTapEngine.State.FINISHED) {
+            if (clock.targetOffset() >= clock.remaining()) clock.advance(clock.remaining());
+            else twinHit(clock);
+        }
+        check(clock.elapsed() == 60 && clock.lives() == 5 && clock.hits() > 50 && clock.simultaneousHits() > 0, "twin perfect play reaches exact 60 seconds with chords");
+        check(clock.travelTime() < 1.6 && clock.travelTime() >= .95, "twin notes accelerate within readable bound");
+
+        TwinTapEngine a = new TwinTapEngine(123), b = new TwinTapEngine(123), large = new TwinTapEngine(123);
+        a.start(); b.start(); large.start();
+        for (int i = 0; i < 600; i++) a.advance(1.0 / 60);
+        for (int i = 0; i < 1200; i++) b.advance(1.0 / 120);
+        large.advance(10);
+        check(a.state() == b.state() && a.lives() == b.lives() && a.feedbackId() == b.feedbackId()
+            && Math.abs(a.elapsed() - b.elapsed()) < 1e-8, "twin 60Hz and 120Hz deadline consistency");
+        check(large.state() == a.state() && large.lives() == a.lives() && large.feedbackId() == a.feedbackId()
+            && Math.abs(large.elapsed() - a.elapsed()) < 1e-8, "twin delayed frame cannot skip note deadlines");
+        at = ready.elapsed(); ready.start(); ready.advance(Double.NaN); ready.advance(Double.POSITIVE_INFINITY); ready.advance(-1); ready.advance(0);
+        check(ready.elapsed() == at, "twin invalid time deltas ignored");
     }
 }

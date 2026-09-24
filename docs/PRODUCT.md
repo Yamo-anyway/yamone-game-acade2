@@ -36,6 +36,16 @@ Exact numbers below are initial playable tuning, not a claim that the user fixed
 - Pause freezes timer and wall/recovery. Returning from background needs explicit resume, without lane movement on the resume tap. Finished games reject input.
 - Home, instructions, pause/retry, result and local records share the native shell. Online ranking remains disconnected; ads unchanged.
 
+## Twin Tap v1
+
+- A valid start tap begins the clock without judging a note. Notes descend in two lanes to one hit line; a note can require left, right or both lanes.
+- Android input tracks every pointer ID. `DOWN` and `POINTER_DOWN` each produce at most one lane hit; move/hold and duplicate taps from the same lane cannot create repeated scores. One finger may alternate lanes, while double notes accept two physical pointers within the same timing window.
+- Hit window is ±180ms. Within ±55ms is PERFECT. A wrong lane inside the window or an incomplete/untouched note at its deadline costs one of five lives and resets combo; very early/late free taps outside the current window are ignored.
+- A single note is worth 150 PERFECT / 100 HIT; a double note is worth 300 / 200. Each completed note adds a 10-point combo bonus per prior consecutive success, capped at +100.
+- The first target arrives at 1.6 seconds. Inter-note interval accelerates from 1.15 seconds to a .72-second minimum; visual travel time decreases from 1.6 seconds to a .95-second minimum. Double notes begin after the first two notes and occur at a deterministic 30% rate from the seeded sequence.
+- 60 active seconds maximum; the time boundary wins over a deadline at the same instant. Pause freezes a partially completed double note and all timing. Resume taps do not judge a note. Finished games reject input.
+- Results include hits, successful double notes and best combo. Local score/play count uses the existing per-game store; ranking server and production ads remain disconnected.
+
 ## Ads and records
 
 Only banners, no interstitial/rewarded ads, play limits, payments or account screens. Fixed banner strip separated from controls and system insets. Official test IDs in debug. Release ads disabled pending owner configuration and release prerequisites.
