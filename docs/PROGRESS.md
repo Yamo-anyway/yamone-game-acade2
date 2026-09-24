@@ -7,7 +7,7 @@ Current stage: **M04 / v0.4.0**. Repository is the source of truth for subsequen
 | M01 | Android shell + Orbit Snap + local records + test banner + ranking boundary | complete; core checks, lint and debug APK passed |
 | M02 | Color Break | complete; 33 core checks, Android lint and debug APK passed |
 | M03 | Twin Tap, true multi-touch | complete; 52 core checks, Android lint and debug APK passed |
-| M04 | Line Surf | implemented; 75 core checks passed; Android CI pending |
+| M04 | Line Surf | complete; 75 core checks, Android lint and debug APK passed |
 | M05 | Pocket Pulse | next |
 | M06 | Stack Slice | pending |
 | M07 | Integration, lifecycle/aspect ratios, debug APK QA | pending |
@@ -56,7 +56,11 @@ No device/emulator play, installed APK, physical multi-touch, screen-ratio QA or
 
 `bash scripts/test-core.sh`: **75 checks passed** (52 prior checks + 23 Line Surf/catalog checks). Coverage includes first-hold start, release jump, duplicate/canceled input, paused physics, fresh-hold resume, safe traversal of seeded gap and obstacle types, score composition, hazard bounds/reaction distance, crash/no-bonus behavior, three-crash finish, terminal input, READY pause, perfect 60-second completion, speed bound, 60/120Hz and delayed-frame collision consistency, invalid deltas and unlock scope. `git diff --check` passed.
 
-Local Android lint/APK verification is unavailable because this environment has no Gradle or Android SDK. GitHub Actions for the exact M04 code commit must pass before Android validation is complete. No device/emulator play, installed APK, physical jump timing, screen-ratio QA or actual test-ad impression is claimed.
+Local Android lint/APK verification is unavailable because this environment has no Gradle or Android SDK.
+
+GitHub Actions run **36033808759**, exact code commit **3990e8a212824e7d8dd3cb04ff378284290b36ef**: **SUCCESS**. All 75 core checks, `:app:lintDebug`, `:app:assembleDebug`, debug APK upload (`yamone-arcade2-debug`) and lint report upload passed. [M04 build result](https://github.com/Yamo-anyway/yamone-game-acade2/actions/runs/36033808759). This follow-up only records the verified result; application code is unchanged.
+
+No device/emulator play, installed APK, physical jump timing, screen-ratio QA or actual test-ad impression is claimed. The connected GitHub API published the verified source tree with a non-forced fast-forward update; local main was restored from the identical remote commit while retaining the original local commit on a checkpoint branch.
 
 ## Known limits / next
 
