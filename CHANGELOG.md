@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0 — 2026-09-25
+
+- Add playable Stack Slice with moving blocks, left/right edge cuts, overlap-only stacking, minimum-width collapse and 60-second rounds.
+- Add a layer-by-layer center-of-mass stability model, tilt-based score bonus, balanced streak, anti-camping block deadline and deterministic seeded motion.
+- Add fitted native Canvas tower, cut guides, tilt meter, horizontal swipe filtering, pause/retry/result routing and per-game local records.
+- Add 19 Stack Slice/catalog regression checks (115 total), covering aligned/wrong cuts, duplicate input, collapse, deadline, pause, exact round end, layer capacity, refresh-rate and delayed-frame consistency.
+- Local Java checks and whitespace validation passed. Local Android build unavailable (Gradle/SDK absent); exact-commit CI verification is pending.
+- Device swipe feel/layout and actual test-ad display remain unverified; no production ads or ranking server connected.
+
 ## 0.5.0 — 2026-09-25
 
 - Add playable Pocket Pulse with expanding seeded waves, target rings, PERFECT/GREAT/GOOD timing windows, automatic misses, four lives and 60-second rounds.

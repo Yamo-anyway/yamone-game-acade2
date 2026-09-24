@@ -1,6 +1,6 @@
 # Development progress
 
-Current stage: **M05 / v0.5.0**. Repository is the source of truth for subsequent hourly runs.
+Current stage: **M06 / v0.6.0**. Repository is the source of truth for subsequent hourly runs.
 
 | Milestone | Scope | State |
 |---|---|---|
@@ -9,8 +9,8 @@ Current stage: **M05 / v0.5.0**. Repository is the source of truth for subsequen
 | M03 | Twin Tap, true multi-touch | complete; 52 core checks, Android lint and debug APK passed |
 | M04 | Line Surf | complete; 75 core checks, Android lint and debug APK passed |
 | M05 | Pocket Pulse | complete; 96 core checks, Android lint and debug APK passed |
-| M06 | Stack Slice | next |
-| M07 | Integration, lifecycle/aspect ratios, debug APK QA | pending |
+| M06 | Stack Slice | implemented; 115 core checks passed locally, Android CI pending |
+| M07 | Integration, lifecycle/aspect ratios, debug APK QA | next |
 
 ## M01 implemented
 
@@ -74,10 +74,19 @@ GitHub Actions run **36040393143**, exact code commit **5608dc39e00ddd110e2fe2be
 
 No device/emulator play, installed APK, physical tap timing, screen-ratio QA or actual test-ad impression is claimed. The connected GitHub API published the verified source tree with a non-forced fast-forward update; local main was restored from the identical remote commit while retaining the original local commit on a checkpoint branch.
 
+## M06 implemented and validation
+
+2026-09-25: Native Stack Slice engine/View, moving incoming blocks, directional left/right edge cuts, overlap-only placement, every-support center-of-mass stability calculation, minimum-width and excessive-tilt collapse, balance score/streak, anti-camping block deadline, 60-second cutoff, gradual acceleration, pause/resume, result/retry and per-game records. Android touch accepts one horizontal swipe per primary pointer and ignores short/vertical or secondary-pointer gestures.
+
+`bash scripts/test-core.sh`: **115 checks passed** (96 prior checks + 19 Stack Slice/catalog checks). Coverage includes explicit start, seeded first block, aligned cut/full score, recovery duplicate suppression, next-block generation, wrong-side narrowing, eventual center-of-mass collapse, terminal input, idle timeout, paused motion/deadline, READY pause, balanced 60-second completion without layer overflow, full balance streak/score, acceleration bounds, 60/120Hz and delayed-frame timeout consistency, invalid deltas and six-game unlock scope. `git diff --check` passed.
+
+Local Android lint/APK verification is unavailable because this environment has no Gradle or Android SDK. Exact-commit GitHub Actions verification is pending for this code checkpoint.
+
+No device/emulator play, installed APK, physical swipe feel, screen-ratio QA or actual test-ad impression is claimed. Production ads and ranking server remain disconnected.
+
 ## Known limits / next
 
-- M06: implement Stack Slice swipe direction, overlap cutting, center-of-mass tilt/failure and deterministic balance regression tests; preserve all five playable games.
-- M07: Activity recreation currently returns home and loses an unfinished round; add proper saved state or a clearly designed abandonment flow before release. Rotation/tablet/landscape rendering not manually verified.
+- M07: integrate and audit all six games. Activity recreation currently returns home and loses an unfinished round; add proper saved state or a clearly designed abandonment flow before release. Rotation/tablet/landscape rendering not manually verified.
 - Canvas visual/game feel and actual test ad rendering still require emulator/device QA.
 - Gradle wrapper is not yet committed; CI installs exact Gradle 8.11.1. Add standard wrapper in an environment with Gradle.
 - Local result writes use SharedPreferences.apply (asynchronous). Durable score policy can be strengthened during integration.

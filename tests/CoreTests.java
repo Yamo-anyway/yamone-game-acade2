@@ -4,6 +4,7 @@ import com.yamone.arcade2.core.ColorBreakEngine;
 import com.yamone.arcade2.core.TwinTapEngine;
 import com.yamone.arcade2.core.LineSurfEngine;
 import com.yamone.arcade2.core.PocketPulseEngine;
+import com.yamone.arcade2.core.StackSliceEngine;
 import com.yamone.arcade2.data.RankingGateway;
 
 public final class CoreTests {
@@ -56,6 +57,7 @@ public final class CoreTests {
         twinTapTests();
         lineSurfTests();
         pocketPulseTests();
+        stackSliceTests();
         System.out.println("All " + passed + " core checks passed.");
     }
     private static int matchingLane(ColorBreakEngine e) { return e.laneColor(0) == e.targetColor() ? 0 : 1; }
@@ -113,7 +115,7 @@ public final class CoreTests {
         at = ready.elapsed(); ready.tapLane(0); ready.advance(Double.NaN); ready.advance(Double.POSITIVE_INFINITY); ready.advance(-1); ready.advance(0);
         check(ready.elapsed() == at, "color invalid time deltas ignored");
         check(GameId.ORBIT_SNAP.ready && GameId.COLOR_BREAK.ready && GameId.TWIN_TAP.ready && GameId.LINE_SURF.ready
-            && GameId.POCKET_PULSE.ready && !GameId.STACK_SLICE.ready, "only implemented games unlocked");
+            && GameId.POCKET_PULSE.ready && GameId.STACK_SLICE.ready, "all six implemented games unlocked");
     }
     private static void twinHit(TwinTapEngine e) {
         double wait = e.targetOffset();
@@ -338,5 +340,88 @@ public final class CoreTests {
             && Math.abs(large.elapsed() - a.elapsed()) < .01, "pulse delayed frame cannot skip expired waves");
         at = ready.elapsed(); ready.tap(); ready.advance(Double.NaN); ready.advance(Double.POSITIVE_INFINITY); ready.advance(-1); ready.advance(0);
         check(ready.elapsed() == at, "pulse invalid time deltas ignored");
+    }
+    private static void stackBalancedCut(StackSliceEngine e) {
+        int watchdog = 400000;
+        while (e.state() == StackSliceEngine.State.RUNNING && !e.waitingNext()
+            && Math.abs(Math.abs(e.incomingCenter() - e.topCenter()) - StackSliceEngine.CUT_WIDTH / 2) > .03
+            && watchdog-- > 0) e.advance(.0005);
+        if (watchdog <= 0) throw new AssertionError("Could not align stack cut");
+        double offset = e.incomingCenter() - e.topCenter();
+        if (e.state() == StackSliceEngine.State.RUNNING && !e.waitingNext()) e.swipe(offset < 0 ? -1 : 1);
+    }
+    private static void stackSliceTests() {
+        StackSliceEngine e = new StackSliceEngine(77), same = new StackSliceEngine(77);
+        e.advance(8); e.swipe(0); e.swipe(2);
+        check(e.state() == StackSliceEngine.State.READY && e.elapsed() == 0 && e.score() == 0, "stack waits for explicit start and valid direction");
+        check(e.incomingCenter() == same.incomingCenter() && e.incomingWidth() == 130
+            && e.topWidth() == StackSliceEngine.BASE_WIDTH, "stack seed fixes first moving block on bounded base");
+        e.start();
+        check(e.state() == StackSliceEngine.State.RUNNING && e.score() == 0 && e.layerCount() == 1, "stack start does not place a block");
+        stackBalancedCut(e);
+        check(e.score() == 200 && e.placed() == 1 && e.balanced() == 1 && e.layerCount() == 2
+            && Math.abs(e.tilt()) < .001 && e.feedback() == StackSliceEngine.Feedback.BALANCED, "stack aligned side cut earns full balance score");
+        int score = e.score(), feedback = e.feedbackId(); e.swipe(-1); e.swipe(1);
+        check(e.score() == score && e.feedbackId() == feedback && e.waitingNext(), "stack recovery rejects duplicate swipes");
+        int serial = e.blockSerial(); e.advance(StackSliceEngine.RECOVERY);
+        check(e.blockSerial() == serial + 1 && !e.waitingNext() && e.turnElapsed() == 0, "stack recovery creates exactly one next block");
+
+        e.advance(.0005);
+        double offset = e.incomingCenter() - e.topCenter();
+        int wrongDirection = offset < 0 ? 1 : -1;
+        double beforeWidth = e.topWidth(); e.swipe(wrongDirection);
+        check(e.placed() == 2 && e.topWidth() < beforeWidth && Math.abs(e.tilt()) > 0
+            && e.score() < 400, "stack wrong-side cut narrows support and reduces balance bonus");
+
+        StackSliceEngine collapse = new StackSliceEngine(5); collapse.start();
+        int watchdog = 100;
+        while (collapse.state() == StackSliceEngine.State.RUNNING && watchdog-- > 0) {
+            if (collapse.waitingNext()) collapse.advance(StackSliceEngine.RECOVERY);
+            else {
+                collapse.advance(.35);
+                double drift = collapse.incomingCenter() - collapse.topCenter();
+                collapse.swipe(drift < 0 ? 1 : -1);
+            }
+        }
+        check(watchdog > 0 && collapse.state() == StackSliceEngine.State.FINISHED
+            && collapse.feedback() == StackSliceEngine.Feedback.FALL, "stack repeated bad cuts eventually lose center-of-mass support");
+        int placed = collapse.placed(); double at = collapse.elapsed(); collapse.swipe(1); collapse.advance(100); collapse.pause(); collapse.resume();
+        check(collapse.placed() == placed && collapse.elapsed() == at && collapse.state() == StackSliceEngine.State.FINISHED, "stack fallen state rejects input and time");
+
+        StackSliceEngine timeout = new StackSliceEngine(9); timeout.start(); timeout.advance(10);
+        check(timeout.state() == StackSliceEngine.State.FINISHED && timeout.feedback() == StackSliceEngine.Feedback.TIMEOUT
+            && timeout.placed() == 0 && timeout.elapsed() >= 3.5 && timeout.elapsed() <= 3.61, "stack idle block deadline prevents camping");
+
+        StackSliceEngine paused = new StackSliceEngine(8); paused.start(); paused.advance(.4);
+        at = paused.elapsed(); double center = paused.incomingCenter(), turn = paused.turnElapsed();
+        paused.pause(); paused.advance(30); paused.swipe(1);
+        check(paused.state() == StackSliceEngine.State.PAUSED && paused.elapsed() == at
+            && paused.incomingCenter() == center && paused.turnElapsed() == turn && paused.placed() == 0, "stack pause freezes block, deadline and input");
+        paused.resume(); paused.advance(.1);
+        check(paused.state() == StackSliceEngine.State.RUNNING && paused.elapsed() > at, "stack resume continues same moving block");
+        StackSliceEngine ready = new StackSliceEngine(3); ready.pause(); ready.resume(); ready.advance(9);
+        check(ready.state() == StackSliceEngine.State.READY && ready.elapsed() == 0, "stack pause before start preserves ready state");
+
+        StackSliceEngine clock = new StackSliceEngine(13); clock.start();
+        while (clock.state() != StackSliceEngine.State.FINISHED) {
+            if (clock.waitingNext()) clock.advance(Math.min(clock.recoveryRemaining(), clock.remaining()));
+            else stackBalancedCut(clock);
+        }
+        check(clock.elapsed() == 60 && clock.placed() > 120 && clock.balanced() == clock.placed()
+            && clock.layerCount() == clock.placed() + 1, "stack balanced play reaches exact 60 seconds without layer overflow");
+        check(clock.bestBalanceStreak() == clock.placed() && clock.maxTilt() < .01
+            && clock.score() == clock.placed() * 200, "stack sustained centered cuts keep full balance bonus");
+        check(clock.angularSpeed() > 1.9 && clock.angularSpeed() <= 2.62 && clock.turnLimit() >= 2.7, "stack motion accelerates within deadline bounds");
+
+        StackSliceEngine a = new StackSliceEngine(123), b = new StackSliceEngine(123), large = new StackSliceEngine(123);
+        a.start(); b.start(); large.start();
+        for (int i = 0; i < 240; i++) a.advance(1.0 / 60);
+        for (int i = 0; i < 480; i++) b.advance(1.0 / 120);
+        large.advance(4);
+        check(a.state() == b.state() && a.feedback() == b.feedback() && Math.abs(a.elapsed() - b.elapsed()) < .01
+            && Math.abs(a.incomingCenter() - b.incomingCenter()) < .05, "stack 60Hz and 120Hz timeout consistency");
+        check(large.state() == a.state() && large.feedback() == a.feedback() && Math.abs(large.elapsed() - a.elapsed()) < .01, "stack delayed frame cannot skip block timeout");
+        at = ready.elapsed(); ready.start(); ready.advance(Double.NaN); ready.advance(Double.POSITIVE_INFINITY); ready.advance(-1); ready.advance(0);
+        check(ready.elapsed() == at, "stack invalid time deltas ignored");
     }
 }

@@ -65,6 +65,16 @@ Exact numbers below are initial playable tuning, not a claim that the user fixed
 - 60 active seconds maximum; completion wins over an automatic miss on the same instant. Pause freezes wave radius, recovery and time. The resume tap only resumes the paused view and finished games reject input.
 - Android Canvas draws the pulse, target/tolerance glow, accuracy feedback, lives and combo. Results include hits, PERFECT count and best combo; the shared shell stores a separate local best.
 
+## Stack Slice v1
+
+- The first horizontal gesture starts the active clock and places that same moving block on release. Swipe left cuts 26px from the left edge; swipe right cuts the right edge. Short or mostly vertical gestures do not cut.
+- Only the intersection between the trimmed block and current top support remains. The first 130px block is placed on a 150px base; later incoming blocks are up to 26px wider than the current support so a well-timed cut can preserve its width.
+- Each successful block checks the center of mass of every group of layers above every support. If any center crosses its support edge (with a 3px safety margin), or the overlap is narrower than 32px, the tower falls and the round ends.
+- A placed block awards 100 plus a balance bonus from 0–100 based on the worst normalized tilt. Tilt at or below .25 counts toward the balance streak; a wobble resets the current streak but retains the best streak.
+- Incoming blocks oscillate from the current support center at 1.9→2.62 radians/second. A per-block deadline decreases from 3.6 to 2.7 seconds and prevents idle camping. A .24-second recovery rejects duplicate swipes and prepares exactly one seeded next block.
+- 60 active seconds maximum; completing the minute wins over a timeout on the same simulation instant. Pause freezes motion, recovery, deadline and time. The resume tap only resumes, and finished games reject input.
+- Android Canvas fits a 360×520 logical board, draws the visible tower, moving cut guides, tilt meter and feedback. Results include placed blocks, balanced cuts and best balance streak; the shared shell stores a separate local best.
+
 ## Ads and records
 
 Only banners, no interstitial/rewarded ads, play limits, payments or account screens. Fixed banner strip separated from controls and system insets. Official test IDs in debug. Release ads disabled pending owner configuration and release prerequisites.
