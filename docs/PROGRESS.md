@@ -1,6 +1,6 @@
 # Development progress
 
-Current stage: **M06 / v0.6.0**. Repository is the source of truth for subsequent hourly runs.
+Current stage: **M07 / v0.7.0**. Repository is the source of truth for subsequent work.
 
 | Milestone | Scope | State |
 |---|---|---|
@@ -10,7 +10,7 @@ Current stage: **M06 / v0.6.0**. Repository is the source of truth for subsequen
 | M04 | Line Surf | complete; 75 core checks, Android lint and debug APK passed |
 | M05 | Pocket Pulse | complete; 96 core checks, Android lint and debug APK passed |
 | M06 | Stack Slice | complete; 115 core checks, Android lint and debug APK passed |
-| M07 | Integration, lifecycle/aspect ratios, debug APK QA | next |
+| M07 | Integration, lifecycle/aspect ratios, debug APK QA | implemented; 115 core + 17 integration checks passed locally, Android CI pending |
 
 ## M01 implemented
 
@@ -88,12 +88,22 @@ GitHub Actions run **36047467358**, exact fixed commit **665b71418732a52fa8c639f
 
 No device/emulator play, installed APK, physical swipe feel, screen-ratio QA or actual test-ad impression is claimed. The connected GitHub API published both source commits with non-forced fast-forward updates. Production ads and ranking server remain disconnected.
 
+## M07 implemented and validation
+
+2026-09-25: Integrated all six games around an explicit lifecycle policy. Orientation/screen-size changes retain the active Activity/engine, cancel held input, pause for an explicit resume and recreate the adaptive test banner at the new size. Process recreation deliberately abandons an in-memory run without saving a partial score, explains the interruption and offers a same-game restart; non-game destinations restore safely. Orbit now uses the same width-and-height 360×520 fitting policy as the other five boards.
+
+Local installation ID creation, terminal results and record deletion now use synchronous SharedPreferences commits. A completed score is durable before the result screen appears, while run-ID duplicate suppression and per-game best/play counts remain intact. No online submission was enabled.
+
+`bash scripts/test-core.sh`: **115 checks passed**. `bash scripts/check-integration.sh`: **17 checks passed**, covering official debug test banner ID, release ad disablement, absence of interstitial/rewarded ads, no backup/cleartext traffic, rotation retention, process-recreation abandonment detection, terminal-result commit, empty disconnected ranking, all six width/height-fitted boards and full catalog unlock. `git diff --check` passed.
+
+Local Android lint/APK verification is unavailable because this environment has no Gradle or Android SDK. Exact-commit GitHub Actions verification is pending for this code checkpoint.
+
+No device/emulator play, installed APK, physical touch/rotation, process-kill recovery UI, screen-ratio QA or actual test-ad impression is claimed.
+
 ## Known limits / next
 
-- M07: integrate and audit all six games. Activity recreation currently returns home and loses an unfinished round; add proper saved state or a clearly designed abandonment flow before release. Rotation/tablet/landscape rendering not manually verified.
-- Canvas visual/game feel and actual test ad rendering still require emulator/device QA.
+- Canvas visual/game feel, installed-APK safe areas, physical multi-touch/rotation and actual test-ad rendering still require emulator/device QA.
 - Gradle wrapper is not yet committed; CI installs exact Gradle 8.11.1. Add standard wrapper in an environment with Gradle.
-- Local result writes use SharedPreferences.apply (asynchronous). Durable score policy can be strengthened during integration.
 - Live ad IDs, server connection and store submission pending user-provided information; these do not block game development.
 
 ## Automation

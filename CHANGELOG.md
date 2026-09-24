@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.0 — 2026-09-25
+
+- Integrate all six games with one orientation/process-recreation policy: rotations retain and pause the live engine; process recreation explicitly abandons unsaved partial runs and offers a restart.
+- Fit Orbit Snap to both width and height like the other five 360×520 Canvas boards, preventing short/landscape layouts from cropping controls.
+- Recreate the anchored adaptive test banner after configuration changes while preserving pause/resume/destroy forwarding and separation from game touch targets.
+- Commit installation identity, terminal results and record deletion synchronously so a completed result is durable before navigation.
+- Add 17 executable integration-policy checks for ad scope, six-game board fitting/unlock, lifecycle markers, local durability, network safety and disconnected ranking behavior; retain all 115 engine checks.
+- Local Java and integration checks passed. Local Android build unavailable (Gradle/SDK absent); exact-commit CI verification is pending.
+- Physical device layout/touch/rotation, process-kill UI and actual test-ad display remain unverified; no production ads or ranking server connected.
+
 ## 0.6.0 — 2026-09-25
 
 - Add playable Stack Slice with moving blocks, left/right edge cuts, overlap-only stacking, minimum-width collapse and 60-second rounds.

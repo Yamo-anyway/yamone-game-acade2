@@ -15,11 +15,13 @@ import com.yamone.arcade2.BuildConfig;
 
 /** Isolated banner strip outside all game touch targets. Only official demo ads in debug. */
 public final class BannerSlot extends FrameLayout {
+    private final Activity activity;
     private AdView ad;
-    private boolean disposed;
+    private boolean disposed, initialized;
+    private OnLayoutChangeListener reloadListener;
     private final TextView status;
     public BannerSlot(Activity activity) {
-        super(activity);
+        super(activity); this.activity = activity;
         setBackgroundColor(0xFF10162B);
         int h = Math.round(60 * getResources().getDisplayMetrics().density);
         setMinimumHeight(h);
@@ -29,10 +31,23 @@ public final class BannerSlot extends FrameLayout {
         addView(status, new LayoutParams(LayoutParams.MATCH_PARENT, h));
         if (BuildConfig.TEST_BANNER_ENABLED) {
             new Thread(() -> MobileAds.initialize(activity.getApplicationContext(), ignored ->
-                activity.runOnUiThread(() -> post(() -> load(activity)))), "ads-init").start();
+                activity.runOnUiThread(() -> { initialized = true; loadWhenLaidOut(); })), "ads-init").start();
         }
     }
-    private void load(Activity activity) {
+    private void loadWhenLaidOut() {
+        if (disposed || !initialized || ad != null) return;
+        if (getWidth() <= 0) {
+            addOnLayoutChangeListener(new OnLayoutChangeListener() {
+                @Override public void onLayoutChange(android.view.View v, int left, int top, int right, int bottom,
+                        int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                    if (right > left) { removeOnLayoutChangeListener(this); loadWhenLaidOut(); }
+                }
+            });
+            return;
+        }
+        load();
+    }
+    private void load() {
         if (disposed || activity.isFinishing() || activity.isDestroyed() || ad != null) return;
         int width = Math.max(1, Math.round(getWidth() / getResources().getDisplayMetrics().density));
         ad = new AdView(activity);
@@ -46,7 +61,25 @@ public final class BannerSlot extends FrameLayout {
         LayoutParams lp = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER);
         addView(ad, lp); ad.loadAd(new AdRequest.Builder().build());
     }
+    public void reloadForConfiguration() {
+        if (disposed || !BuildConfig.TEST_BANNER_ENABLED) return;
+        if (ad != null) { removeView(ad); ad.destroy(); ad = null; }
+        status.setVisibility(VISIBLE); status.setText("테스트 배너를 불러오는 중");
+        if (reloadListener != null) removeOnLayoutChangeListener(reloadListener);
+        reloadListener = new OnLayoutChangeListener() {
+            @Override public void onLayoutChange(android.view.View v, int left, int top, int right, int bottom,
+                    int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                if (right <= left) return;
+                removeOnLayoutChangeListener(this); reloadListener = null; loadWhenLaidOut();
+            }
+        };
+        addOnLayoutChangeListener(reloadListener); requestLayout();
+    }
     public void pause() { if (ad != null) ad.pause(); }
     public void resume() { if (ad != null) ad.resume(); }
-    public void dispose() { disposed = true; if (ad != null) { ad.destroy(); ad = null; } }
+    public void dispose() {
+        disposed = true;
+        if (reloadListener != null) { removeOnLayoutChangeListener(reloadListener); reloadListener = null; }
+        if (ad != null) { removeView(ad); ad.destroy(); ad = null; }
+    }
 }

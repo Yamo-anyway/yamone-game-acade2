@@ -81,8 +81,16 @@ Only banners, no interstitial/rewarded ads, play limits, payments or account scr
 
 Local best scores, online ranking placeholder that explicitly says preparing; no fake entries. API contract is a proposal awaiting the owner's server. App reinstall clears data; Android backup disabled to avoid promising identity transfer.
 
+## Integration and lifecycle v1
+
+- Every game board fits both the available width and height against the same 360×520 logical canvas. Extra space is letterboxed; game touch coordinates remain owned by each View and never include the banner strip.
+- Orientation/screen-size changes keep the current Activity and engine, cancel any held pointer, pause the round and require an explicit resume tap. The adaptive test banner is destroyed and loaded again for the new dimensions.
+- Process/Activity recreation does not pretend to restore an in-memory engine. An active run is deliberately abandoned without saving a partial score, the user is told why, and a same-game restart is offered. Home, rankings and settings destinations restore safely; a previously committed result opens local records.
+- Installation ID creation, terminal game results and record deletion are synchronously committed. Nickname and vibration preferences remain non-critical asynchronous settings writes.
+- CI checks all six rules engines, six-game unlock state, width/height board fitting, test-only banner policy, no interstitial/rewarded ad classes, disabled release ads, disconnected empty ranking and local-record durability markers before Android lint/APK assembly.
+
 ## Next development boundaries
 
 Implement one game per stage using the same shared shell. UI artwork is code-native. Original image is a concept reference, not a requirement to rasterize its mock phone UI into the app.
 
-Integration milestone must cover aspect ratios, Android lifecycle/Activity recreation, multi-touch, tutorial readability, frame pacing, safe areas, record persistence, offline ads, test APK and manual QA checklist. No server provisioning, production ad deployment or store submission in this task.
+No server provisioning, production ad deployment or store submission is part of this client milestone. Physical touch/game feel, installed-APK safe areas, device rotation and actual test-ad rendering still require device QA.

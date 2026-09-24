@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.graphics.Insets;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.InputFilter;
@@ -41,6 +42,7 @@ import java.util.UUID;
 
 public final class MainActivity extends Activity {
     private static final int BG = 0xFF090E22, PANEL = 0xFF151D35, MINT = 0xFF67E7DB, TEXT = 0xFFF5F7FF, MUTED = 0xFF9AA5C5;
+    private static final String STATE_SCREEN = "screen", STATE_GAME = "active_game", STATE_ACTIVE_RUN = "active_run";
     private LinearLayout root, nav;
     private FrameLayout content;
     private LocalStore store;
@@ -66,8 +68,22 @@ public final class MainActivity extends Activity {
         root.addView(nav);
         View separator = new View(this); separator.setBackgroundColor(BG); root.addView(separator, new LinearLayout.LayoutParams(-1, dp(12)));
         banner = new BannerSlot(this); root.addView(banner, new LinearLayout.LayoutParams(-1, -2));
-        setContentView(root); root.requestApplyInsets(); home();
+        setContentView(root); root.requestApplyInsets(); restoreDestination(savedInstanceState);
         if (Build.VERSION.SDK_INT >= 33) getOnBackInvokedDispatcher().registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::handleBack);
+    }
+    private void restoreDestination(Bundle state) {
+        if (state == null) { home(); return; }
+        String gameName = state.getString(STATE_GAME, GameId.ORBIT_SNAP.name());
+        try { activeGame = GameId.valueOf(gameName); } catch (IllegalArgumentException ignored) { activeGame = GameId.ORBIT_SNAP; }
+        String restoredScreen = state.getString(STATE_SCREEN, "home");
+        if (state.getBoolean(STATE_ACTIVE_RUN, false)) {
+            home();
+            root.post(() -> new AlertDialog.Builder(this).setTitle("진행 중이던 판이 종료됐어요")
+                .setMessage("앱이 다시 시작되어 진행 중 기록은 저장하지 않았습니다. 같은 게임을 새로 시작할 수 있어요.")
+                .setPositiveButton("다시 시작", (d, w) -> startGame(activeGame)).setNegativeButton("홈", null).show());
+        } else if ("rankings".equals(restoredScreen) || "result".equals(restoredScreen)) rankings();
+        else if ("settings".equals(restoredScreen)) settings();
+        else home();
     }
     private void addNav(String title, Runnable action) {
         Button b = button(title, PANEL, TEXT, action); b.setTextSize(12);
@@ -215,6 +231,18 @@ public final class MainActivity extends Activity {
     private int dp(int n) { return Math.round(n * getResources().getDisplayMetrics().density); }
     private void handleBack() { if ("game".equals(screen)) pauseMenu(); else if (!"home".equals(screen)) home(); else finish(); }
     @SuppressWarnings("deprecation") @Override public void onBackPressed() { handleBack(); }
+    @Override protected void onSaveInstanceState(Bundle outState) {
+        outState.putString(STATE_SCREEN, screen);
+        outState.putString(STATE_GAME, activeGame.name());
+        outState.putBoolean(STATE_ACTIVE_RUN, "game".equals(screen) && gameView != null);
+        super.onSaveInstanceState(outState);
+    }
+    @Override public void onConfigurationChanged(Configuration configuration) {
+        super.onConfigurationChanged(configuration);
+        root.requestApplyInsets();
+        if (gameView != null) { gameView.setForeground(false); gameView.setForeground(true); }
+        if (banner != null) banner.reloadForConfiguration();
+    }
     @Override protected void onPause() { if (gameView != null) gameView.setForeground(false); if (banner != null) banner.pause(); super.onPause(); }
     @Override protected void onResume() { super.onResume(); if (gameView != null) gameView.setForeground(true); if (banner != null) banner.resume(); }
     @Override protected void onDestroy() { if (banner != null) banner.dispose(); super.onDestroy(); }

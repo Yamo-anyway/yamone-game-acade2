@@ -45,11 +45,12 @@ public final class OrbitView extends GameView {
         long now = SystemClock.elapsedRealtimeNanos();
         if (foreground && lastFrame != 0) engine.advance((now - lastFrame) / 1_000_000_000.0);
         lastFrame = now;
-        float scale = getWidth() / 360f;
+        float scale = Math.min(getWidth() / 360f, getHeight() / 520f);
         if (scale <= 0) return;
-        canvas.save(); canvas.scale(scale, scale);
-        float height = getHeight() / scale;
         canvas.drawColor(INK);
+        float offsetX = (getWidth() - 360 * scale) / 2, offsetY = (getHeight() - 520 * scale) / 2;
+        canvas.save(); canvas.translate(offsetX, offsetY); canvas.scale(scale, scale);
+        float height = 520;
         for (int i = 0; i < stars.length; i += 2) {
             fill(0xFF334468); canvas.drawCircle(stars[i] * 360, stars[i + 1] * height, i % 3 == 0 ? 1.3f : .7f, paint);
         }
