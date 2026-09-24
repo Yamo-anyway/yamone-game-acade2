@@ -9,7 +9,7 @@ Current stage: **M06 / v0.6.0**. Repository is the source of truth for subsequen
 | M03 | Twin Tap, true multi-touch | complete; 52 core checks, Android lint and debug APK passed |
 | M04 | Line Surf | complete; 75 core checks, Android lint and debug APK passed |
 | M05 | Pocket Pulse | complete; 96 core checks, Android lint and debug APK passed |
-| M06 | Stack Slice | implemented; 115 core checks passed locally, Android CI pending |
+| M06 | Stack Slice | complete; 115 core checks, Android lint and debug APK passed |
 | M07 | Integration, lifecycle/aspect ratios, debug APK QA | next |
 
 ## M01 implemented
@@ -80,9 +80,13 @@ No device/emulator play, installed APK, physical tap timing, screen-ratio QA or 
 
 `bash scripts/test-core.sh`: **115 checks passed** (96 prior checks + 19 Stack Slice/catalog checks). Coverage includes explicit start, seeded first block, aligned cut/full score, recovery duplicate suppression, next-block generation, wrong-side narrowing, eventual center-of-mass collapse, terminal input, idle timeout, paused motion/deadline, READY pause, balanced 60-second completion without layer overflow, full balance streak/score, acceleration bounds, 60/120Hz and delayed-frame timeout consistency, invalid deltas and six-game unlock scope. `git diff --check` passed.
 
-Local Android lint/APK verification is unavailable because this environment has no Gradle or Android SDK. Exact-commit GitHub Actions verification is pending for this code checkpoint.
+Local Android lint/APK verification is unavailable because this environment has no Gradle or Android SDK.
 
-No device/emulator play, installed APK, physical swipe feel, screen-ratio QA or actual test-ad impression is claimed. Production ads and ranking server remain disconnected.
+The first CI run **36047251537** caught two Canvas cut-guide coordinates passed as doubles where Android requires floats; core tests passed but compilation failed. Commit **665b71418732a52fa8c639f96cf5445100bbced3** corrected the coordinate type without changing game rules.
+
+GitHub Actions run **36047467358**, exact fixed commit **665b71418732a52fa8c639f96cf5445100bbced3**: **SUCCESS**. All 115 core checks, `:app:lintDebug`, `:app:assembleDebug`, debug APK upload (`yamone-arcade2-debug`) and lint report upload passed. [M06 build result](https://github.com/Yamo-anyway/yamone-game-acade2/actions/runs/36047467358). This follow-up only records the verified result; application code is unchanged.
+
+No device/emulator play, installed APK, physical swipe feel, screen-ratio QA or actual test-ad impression is claimed. The connected GitHub API published both source commits with non-forced fast-forward updates. Production ads and ranking server remain disconnected.
 
 ## Known limits / next
 
