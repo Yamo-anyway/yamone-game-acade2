@@ -4,7 +4,7 @@ Current stage: **M01 / v0.1.0**. Repository is the source of truth for subsequen
 
 | Milestone | Scope | State |
 |---|---|---|
-| M01 | Android shell + Orbit Snap + local records + test banner + ranking boundary | implemented, core checks passed; Android CI pending |
+| M01 | Android shell + Orbit Snap + local records + test banner + ranking boundary | complete; core checks, lint and debug APK passed |
 | M02 | Color Break | next |
 | M03 | Twin Tap, true multi-touch | pending |
 | M04 | Line Surf | pending |
@@ -20,7 +20,11 @@ Native Android application (`com.yamone.arcade2`), six-game catalog (only Orbit 
 
 2026-09-24: `bash scripts/test-core.sh` — **15 checks passed**. Covers first-touch start, precise hit, duplicate release, canceled touch, background pause/resume, idle camping, finished-state input, successful full 60s round, angle wrap, 60/120Hz consistency, invalid deltas and disconnected ranking.
 
-The local `javac` executable is absent, but the installed Java 17 runtime includes the `jdk.compiler` module. The script uses `java com.sun.tools.javac.Main` as a supported fallback and completed compilation/testing. Android SDK and Gradle are absent locally; Android lint/debug APK verification is pending CI. No device/UI/ad-display pass is claimed.
+The local `javac` executable is absent, but the installed Java 17 runtime includes the `jdk.compiler` module. The script uses `java com.sun.tools.javac.Main` as a fallback and completed compilation/testing. Android SDK and Gradle are absent locally.
+
+GitHub Actions run **36012804556**, code commit **f4d2b71242fd65f1bf18a3caa768c14b8ba92ba9**: **SUCCESS**. The 15 engine checks, `:app:lintDebug`, `:app:assembleDebug`, debug APK artifact upload and lint report upload all succeeded. APK artifact: `yamone-arcade2-debug`. [Build result](https://github.com/Yamo-anyway/yamone-game-acade2/actions/runs/36012804556).
+
+The initial CI failed because setup-android tried the retired SDK package `tools`. Specifying `platform-tools` fixed setup; the subsequent complete build passed. XML parsing and git whitespace checks also passed. No emulator/device UI or actual ad-display pass is claimed. This checkpoint changes documentation only after the verified code commit.
 
 ## Known limits / next
 
