@@ -6,7 +6,7 @@ Current stage: **M03 / v0.3.0**. Repository is the source of truth for subsequen
 |---|---|---|
 | M01 | Android shell + Orbit Snap + local records + test banner + ranking boundary | complete; core checks, lint and debug APK passed |
 | M02 | Color Break | complete; 33 core checks, Android lint and debug APK passed |
-| M03 | Twin Tap, true multi-touch | implemented; 52 core checks passed; Android CI pending |
+| M03 | Twin Tap, true multi-touch | complete; 52 core checks, Android lint and debug APK passed |
 | M04 | Line Surf | next |
 | M05 | Pocket Pulse | pending |
 | M06 | Stack Slice | pending |
@@ -44,7 +44,11 @@ No device/emulator play, installed APK, real touch, persistence across process r
 
 `bash scripts/test-core.sh`: **52 checks passed** (33 prior checks + 19 Twin Tap/catalog checks). Coverage includes explicit start, ignored early input, exact single PERFECT, duplicate suppression, wrong-lane failure, deterministic double notes, distinct-lane chord completion across two inputs, pause/resume during a partial chord, exact late miss, five-miss termination, terminal input, perfect 60-second completion, acceleration bounds, 60/120Hz and delayed-frame consistency, invalid deltas and unlock scope. `git diff --check` passed.
 
-Local Android lint/APK verification is unavailable because this environment has no Gradle or Android SDK. GitHub Actions for the exact M03 code commit must pass before Android validation is complete. No device/emulator play, installed APK, physical multi-touch, screen-ratio QA or actual test-ad impression is claimed.
+Local Android lint/APK verification is unavailable because this environment has no Gradle or Android SDK.
+
+GitHub Actions run **36026649428**, exact code commit **33593a4ebf26fbcf6c5229a198bcd195c505d944**: **SUCCESS**. All 52 core checks, `:app:lintDebug`, `:app:assembleDebug`, debug APK upload (`yamone-arcade2-debug`) and lint report upload passed. [M03 build result](https://github.com/Yamo-anyway/yamone-game-acade2/actions/runs/36026649428). This follow-up only records the verified result; application code is unchanged.
+
+No device/emulator play, installed APK, physical multi-touch, screen-ratio QA or actual test-ad impression is claimed. The connected GitHub API published the verified source tree with a non-forced fast-forward update; local main was restored from the identical remote commit while retaining the original local commit on a checkpoint branch.
 
 ## Known limits / next
 
