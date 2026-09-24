@@ -56,6 +56,15 @@ Exact numbers below are initial playable tuning, not a claim that the user fixed
 - 60 active seconds maximum; round completion wins over a collision on the same simulation instant. Pause freezes distance, physics, hazards and time, cancels held input and requires a fresh press after resume. Finished games reject input.
 - Android Canvas draws the deterministic parallax course, gap/obstacle preview, rider height, lives, distance and touch state. Results include distance, clears and jumps; local records use the shared shell.
 
+## Pocket Pulse v1
+
+- The first tap starts the active clock without judging. Each pulse expands from radius 24 toward one seeded target ring between radius 72 and 130; the target remains fixed until the pulse resolves.
+- Tap error is absolute radius difference. Error ≤4 is PERFECT (200), ≤10 is GREAT (150), and ≤18 is GOOD (100). Each consecutive hit adds 10 per prior success, capped at +100; any miss resets combo.
+- Tapping outside the 18px window immediately misses. Waiting until the wave passes the target by more than 18px also produces exactly one automatic miss. Four misses end the round; taps during the .28-second result/recovery interval are ignored.
+- Expansion speed starts at 72px/s and adds .9px/s per elapsed second, reaching 126px/s at 60 seconds. A new target and wave are generated only after recovery, deterministically from the run seed.
+- 60 active seconds maximum; completion wins over an automatic miss on the same instant. Pause freezes wave radius, recovery and time. The resume tap only resumes the paused view and finished games reject input.
+- Android Canvas draws the pulse, target/tolerance glow, accuracy feedback, lives and combo. Results include hits, PERFECT count and best combo; the shared shell stores a separate local best.
+
 ## Ads and records
 
 Only banners, no interstitial/rewarded ads, play limits, payments or account screens. Fixed banner strip separated from controls and system insets. Official test IDs in debug. Release ads disabled pending owner configuration and release prerequisites.

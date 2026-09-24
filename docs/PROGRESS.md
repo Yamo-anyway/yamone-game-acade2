@@ -1,6 +1,6 @@
 # Development progress
 
-Current stage: **M04 / v0.4.0**. Repository is the source of truth for subsequent hourly runs.
+Current stage: **M05 / v0.5.0**. Repository is the source of truth for subsequent hourly runs.
 
 | Milestone | Scope | State |
 |---|---|---|
@@ -8,8 +8,8 @@ Current stage: **M04 / v0.4.0**. Repository is the source of truth for subsequen
 | M02 | Color Break | complete; 33 core checks, Android lint and debug APK passed |
 | M03 | Twin Tap, true multi-touch | complete; 52 core checks, Android lint and debug APK passed |
 | M04 | Line Surf | complete; 75 core checks, Android lint and debug APK passed |
-| M05 | Pocket Pulse | next |
-| M06 | Stack Slice | pending |
+| M05 | Pocket Pulse | implemented; 96 core checks passed; Android CI pending |
+| M06 | Stack Slice | next |
 | M07 | Integration, lifecycle/aspect ratios, debug APK QA | pending |
 
 ## M01 implemented
@@ -62,9 +62,17 @@ GitHub Actions run **36033808759**, exact code commit **3990e8a212824e7d8dd3cb04
 
 No device/emulator play, installed APK, physical jump timing, screen-ratio QA or actual test-ad impression is claimed. The connected GitHub API published the verified source tree with a non-forced fast-forward update; local main was restored from the identical remote commit while retaining the original local commit on a checkpoint branch.
 
+## M05 implemented and validation
+
+2026-09-25: Native Pocket Pulse engine/View, seeded target rings, expanding wave, PERFECT/GREAT/GOOD windows, four lives, automatic overrun miss, combo scoring, result recovery lockout, 60-second cutoff, gradual acceleration, pause/resume, result/retry and per-game records. Canvas visuals read engine state only and do not affect timing.
+
+`bash scripts/test-core.sh`: **96 checks passed** (75 prior checks + 21 Pocket Pulse/catalog checks). Coverage includes start-only first tap, deterministic target bounds, exact PERFECT, GREAT/GOOD score and combo boundaries, recovery duplicate suppression, early and automatic late misses, one-target-per-recovery, paused wave/recovery, READY pause, four-miss finish, terminal input, perfect 60-second completion, capped combo growth, speed bound, 60/120Hz and delayed-frame deadline consistency, invalid deltas and unlock scope. `git diff --check` passed.
+
+Local Android lint/APK verification is unavailable because this environment has no Gradle or Android SDK. GitHub Actions for the exact M05 code commit must pass before Android validation is complete. No device/emulator play, installed APK, physical tap timing, screen-ratio QA or actual test-ad impression is claimed.
+
 ## Known limits / next
 
-- M05: implement Pocket Pulse expanding-ring timing, precision/combo scoring and deterministic timing regression tests; preserve all four playable games.
+- M06: implement Stack Slice swipe direction, overlap cutting, center-of-mass tilt/failure and deterministic balance regression tests; preserve all five playable games.
 - M07: Activity recreation currently returns home and loses an unfinished round; add proper saved state or a clearly designed abandonment flow before release. Rotation/tablet/landscape rendering not manually verified.
 - Canvas visual/game feel and actual test ad rendering still require emulator/device QA.
 - Gradle wrapper is not yet committed; CI installs exact Gradle 8.11.1. Add standard wrapper in an environment with Gradle.

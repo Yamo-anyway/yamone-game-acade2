@@ -3,6 +3,7 @@ import com.yamone.arcade2.core.OrbitEngine;
 import com.yamone.arcade2.core.ColorBreakEngine;
 import com.yamone.arcade2.core.TwinTapEngine;
 import com.yamone.arcade2.core.LineSurfEngine;
+import com.yamone.arcade2.core.PocketPulseEngine;
 import com.yamone.arcade2.data.RankingGateway;
 
 public final class CoreTests {
@@ -54,6 +55,7 @@ public final class CoreTests {
         colorBreakTests();
         twinTapTests();
         lineSurfTests();
+        pocketPulseTests();
         System.out.println("All " + passed + " core checks passed.");
     }
     private static int matchingLane(ColorBreakEngine e) { return e.laneColor(0) == e.targetColor() ? 0 : 1; }
@@ -111,7 +113,7 @@ public final class CoreTests {
         at = ready.elapsed(); ready.tapLane(0); ready.advance(Double.NaN); ready.advance(Double.POSITIVE_INFINITY); ready.advance(-1); ready.advance(0);
         check(ready.elapsed() == at, "color invalid time deltas ignored");
         check(GameId.ORBIT_SNAP.ready && GameId.COLOR_BREAK.ready && GameId.TWIN_TAP.ready && GameId.LINE_SURF.ready
-            && !GameId.POCKET_PULSE.ready, "only implemented games unlocked");
+            && GameId.POCKET_PULSE.ready && !GameId.STACK_SLICE.ready, "only implemented games unlocked");
     }
     private static void twinHit(TwinTapEngine e) {
         double wait = e.targetOffset();
@@ -261,5 +263,80 @@ public final class CoreTests {
             && Math.abs(large.elapsed() - a.elapsed()) < .01 && Math.abs(large.distance() - a.distance()) < 1, "surf delayed frame cannot skip hazards");
         at = ready.elapsed(); ready.press(); ready.advance(Double.NaN); ready.advance(Double.POSITIVE_INFINITY); ready.advance(-1); ready.advance(0);
         check(ready.elapsed() == at, "surf invalid time deltas ignored");
+    }
+    private static void pulseToRadius(PocketPulseEngine e, double desired) {
+        int watchdog = 400000;
+        while (e.state() == PocketPulseEngine.State.RUNNING && !e.waitingNext()
+            && e.radius() < desired && watchdog-- > 0) e.advance(.0005);
+        if (watchdog <= 0) throw new AssertionError("Could not reach pulse radius");
+    }
+    private static void pulsePerfect(PocketPulseEngine e) {
+        pulseToRadius(e, e.targetRadius());
+        if (e.state() == PocketPulseEngine.State.RUNNING && !e.waitingNext()) e.tap();
+    }
+    private static void pocketPulseTests() {
+        PocketPulseEngine e = new PocketPulseEngine(77), same = new PocketPulseEngine(77);
+        e.advance(8);
+        check(e.state() == PocketPulseEngine.State.READY && e.elapsed() == 0 && e.score() == 0, "pulse waits for first tap without passive score");
+        check(e.targetRadius() == same.targetRadius() && e.targetRadius() >= 72 && e.targetRadius() < 130, "pulse seed fixes target inside visible range");
+        e.tap();
+        check(e.state() == PocketPulseEngine.State.RUNNING && e.score() == 0 && e.lives() == 4, "pulse first tap starts without judging");
+        pulsePerfect(e);
+        check(e.score() == 200 && e.hits() == 1 && e.perfects() == 1 && e.combo() == 1
+            && e.feedback() == PocketPulseEngine.Feedback.PERFECT, "pulse matched rings award perfect");
+        int score = e.score(), feedback = e.feedbackId(); e.tap(); e.tap();
+        check(e.score() == score && e.feedbackId() == feedback && e.waitingNext(), "pulse recovery rejects duplicate taps");
+
+        e.advance(PocketPulseEngine.RECOVERY);
+        pulseToRadius(e, e.targetRadius() - 8); e.tap();
+        check(e.score() == 360 && e.greats() == 1 && e.combo() == 2 && e.feedback() == PocketPulseEngine.Feedback.GREAT, "pulse medium error awards great plus combo");
+        e.advance(PocketPulseEngine.RECOVERY);
+        pulseToRadius(e, e.targetRadius() - 14); e.tap();
+        check(e.score() == 480 && e.goods() == 1 && e.combo() == 3 && e.bestCombo() == 3, "pulse wider valid error awards good plus combo");
+        e.advance(PocketPulseEngine.RECOVERY); e.tap();
+        check(e.lives() == 3 && e.score() == 480 && e.combo() == 0 && e.misses() == 1, "pulse early miss costs life and resets combo");
+
+        PocketPulseEngine late = new PocketPulseEngine(4); late.tap();
+        while (late.feedbackId() == 0) late.advance(.01);
+        check(late.feedback() == PocketPulseEngine.Feedback.MISS && late.lives() == 3 && late.misses() == 1, "pulse passing tolerance auto-misses once");
+        int serial = late.pulseSerial(); late.advance(PocketPulseEngine.RECOVERY);
+        check(late.pulseSerial() == serial + 1 && late.radius() >= PocketPulseEngine.MIN_RADIUS
+            && !late.waitingNext(), "pulse recovery creates exactly one new seeded target");
+
+        PocketPulseEngine paused = new PocketPulseEngine(8); paused.tap(); pulsePerfect(paused); paused.advance(.08);
+        double at = paused.elapsed(), radius = paused.radius(), recovery = paused.recoveryRemaining(); int lives = paused.lives();
+        paused.pause(); paused.advance(30); paused.tap();
+        check(paused.state() == PocketPulseEngine.State.PAUSED && paused.elapsed() == at && paused.radius() == radius
+            && paused.recoveryRemaining() == recovery && paused.lives() == lives, "pulse pause freezes wave/recovery and input");
+        paused.resume(); paused.advance(recovery);
+        check(paused.state() == PocketPulseEngine.State.RUNNING && paused.pulseSerial() == 1, "pulse resume continues pending recovery");
+        PocketPulseEngine ready = new PocketPulseEngine(9); ready.pause(); ready.resume(); ready.advance(9);
+        check(ready.state() == PocketPulseEngine.State.READY && ready.elapsed() == 0, "pulse pause before start preserves ready state");
+
+        PocketPulseEngine failed = new PocketPulseEngine(11); failed.tap(); failed.advance(60);
+        check(failed.state() == PocketPulseEngine.State.FINISHED && failed.lives() == 0 && failed.misses() == 4 && failed.score() == 0, "pulse four unattended waves finish without score");
+        at = failed.elapsed(); failed.tap(); failed.advance(100); failed.pause(); failed.resume();
+        check(failed.elapsed() == at && failed.score() == 0 && failed.state() == PocketPulseEngine.State.FINISHED, "pulse finished state rejects input and time");
+
+        PocketPulseEngine clock = new PocketPulseEngine(13); clock.tap();
+        while (clock.state() != PocketPulseEngine.State.FINISHED) {
+            if (clock.waitingNext()) clock.advance(Math.min(clock.recoveryRemaining(), clock.remaining()));
+            else pulsePerfect(clock);
+        }
+        check(clock.elapsed() == 60 && clock.lives() == 4 && clock.hits() > 40 && clock.perfects() == clock.hits(), "pulse perfect play reaches exact 60 seconds");
+        check(clock.bestCombo() == clock.hits() && clock.score() > clock.hits() * 200, "pulse sustained accuracy builds capped combo bonus");
+        check(clock.speed() > 72 && clock.speed() <= 126, "pulse speed rises within configured bound");
+
+        PocketPulseEngine a = new PocketPulseEngine(123), b = new PocketPulseEngine(123), large = new PocketPulseEngine(123);
+        a.tap(); b.tap(); large.tap();
+        for (int i = 0; i < 600; i++) a.advance(1.0 / 60);
+        for (int i = 0; i < 1200; i++) b.advance(1.0 / 120);
+        large.advance(10);
+        check(a.state() == b.state() && a.lives() == b.lives() && a.misses() == b.misses()
+            && Math.abs(a.elapsed() - b.elapsed()) < .01, "pulse 60Hz and 120Hz deadline consistency");
+        check(large.state() == a.state() && large.lives() == a.lives() && large.misses() == a.misses()
+            && Math.abs(large.elapsed() - a.elapsed()) < .01, "pulse delayed frame cannot skip expired waves");
+        at = ready.elapsed(); ready.tap(); ready.advance(Double.NaN); ready.advance(Double.POSITIVE_INFINITY); ready.advance(-1); ready.advance(0);
+        check(ready.elapsed() == at, "pulse invalid time deltas ignored");
     }
 }

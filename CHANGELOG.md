@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0 — 2026-09-25
+
+- Add playable Pocket Pulse with expanding seeded waves, target rings, PERFECT/GREAT/GOOD timing windows, automatic misses, four lives and 60-second rounds.
+- Add accuracy scoring, capped combo bonus, deterministic target generation, recovery lockout and gradually increasing pulse speed.
+- Add fitted native Canvas rings/tolerance glow, accuracy/error feedback, pause/retry/result routing and per-game local records.
+- Add 21 Pocket Pulse/catalog regression checks (96 total), covering score boundaries, duplicate/early/late input, automatic miss, recovery generation, pause, exact round end, refresh-rate and delayed-frame consistency.
+- Local Java checks and whitespace validation passed. Local Android build unavailable (Gradle/SDK absent); exact-commit CI verification is recorded in PROGRESS.
+- Device timing feel/layout and actual test-ad display remain unverified; no production ads or ranking server connected.
+
 ## 0.4.0 — 2026-09-25
 
 - Add playable Line Surf with hold-to-ride/release-to-jump input, deterministic gaps and obstacles, airborne physics, three lives and 60-second rounds.
