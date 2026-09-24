@@ -5,7 +5,7 @@ Current stage: **M02 / v0.2.0**. Repository is the source of truth for subsequen
 | Milestone | Scope | State |
 |---|---|---|
 | M01 | Android shell + Orbit Snap + local records + test banner + ranking boundary | complete; core checks, lint and debug APK passed |
-| M02 | Color Break | implemented; 33 core checks passed; Android CI pending |
+| M02 | Color Break | complete; 33 core checks, Android lint and debug APK passed |
 | M03 | Twin Tap, true multi-touch | next |
 | M04 | Line Surf | pending |
 | M05 | Pocket Pulse | pending |
@@ -32,7 +32,11 @@ The initial CI failed because setup-android tried the retired SDK package `tools
 
 `bash scripts/test-core.sh`: **33 checks passed** (15 prior checks + 18 Color Break/catalog checks). Covers valid start, unique matching lane, crossing-only judgement, last-moment lane change, no duplicate scoring, combo bonus/reset/cap, pause during recovery, READY pause, three misses, terminal input, exact 60s, speed bounds, 60/120Hz and delayed-frame consistency, invalid deltas and unlock scope. `git diff --check` passed.
 
-Local `gradle :app:lintDebug :app:assembleDebug` attempted but unavailable: `gradle: command not found`; no local Android SDK. GitHub Actions for the M02 code commit must be checked before calling Android validation complete. No device/emulator play, installed APK, real touch, persistence across process restarts or actual test-ad impression is claimed.
+Local `gradle :app:lintDebug :app:assembleDebug` attempted but unavailable: `gradle: command not found`; no local Android SDK.
+
+GitHub Actions run **36019168249**, exact code commit **301d143fbaee1fd88ab415b2e498e59c0cc2bacd**: **SUCCESS**. All 33 core checks, `:app:lintDebug`, `:app:assembleDebug`, debug APK upload (`yamone-arcade2-debug`) and lint report upload passed. [M02 build result](https://github.com/Yamo-anyway/yamone-game-acade2/actions/runs/36019168249). This follow-up only records the verified result; application code is unchanged.
+
+No device/emulator play, installed APK, real touch, persistence across process restarts or actual test-ad impression is claimed. Git HTTPS push had no terminal credentials, so the connected GitHub API published the identical verified source tree with a non-forced fast-forward update; local main was restored from that remote commit while keeping the original local commit on a checkpoint branch.
 
 ## Known limits / next
 
