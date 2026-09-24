@@ -9,12 +9,11 @@ import android.graphics.Typeface;
 import android.os.SystemClock;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
-import android.view.View;
 import com.yamone.arcade2.core.OrbitEngine;
 import java.util.Locale;
 import java.util.Random;
 
-public final class OrbitView extends View {
+public final class OrbitView extends GameView {
     public interface Listener { void finished(OrbitEngine engine); }
     private final OrbitEngine engine;
     private final Listener listener;

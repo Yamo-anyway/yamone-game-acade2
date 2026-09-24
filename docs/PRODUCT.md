@@ -25,6 +25,17 @@ Exact numbers below are initial playable tuning, not a claim that the user fixed
 - Background/pause freezes time, cancels held input, requires explicit resume. Unfinished rounds abandoned to home do not save scores.
 - Completed rounds save best score locally. Scores do not upload retroactively by default.
 
+## Color Break v1
+
+- Tap the left/right half to select one of two lanes; holding/moving/additional fingers do not repeat input. First valid tap starts the clock.
+- One wall rises from below. Match the player's current color/number at the crossing line; the two lanes always have distinct colors and exactly one matches.
+- Three colors carry redundant numbers (1/2/3). Player and wall colors are refreshed together for each new wall.
+- Hit: 100 points plus 10 per previous consecutive success, capped at +100. Miss: lose one of three lives and reset combo. Best combo is retained for the result screen.
+- Wall travel time: 2.4 seconds initially, decreasing by .022 per elapsed second, minimum 1.1 seconds. A .28-second feedback/recovery separates walls.
+- 60 active seconds maximum. Time-limit termination takes precedence over a crossing exactly at 60 seconds. No score is awarded on tap alone; one judgement per wall.
+- Pause freezes timer and wall/recovery. Returning from background needs explicit resume, without lane movement on the resume tap. Finished games reject input.
+- Home, instructions, pause/retry, result and local records share the native shell. Online ranking remains disconnected; ads unchanged.
+
 ## Ads and records
 
 Only banners, no interstitial/rewarded ads, play limits, payments or account screens. Fixed banner strip separated from controls and system insets. Official test IDs in debug. Release ads disabled pending owner configuration and release prerequisites.

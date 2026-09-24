@@ -1,12 +1,12 @@
 # Development progress
 
-Current stage: **M01 / v0.1.0**. Repository is the source of truth for subsequent hourly runs.
+Current stage: **M02 / v0.2.0**. Repository is the source of truth for subsequent hourly runs.
 
 | Milestone | Scope | State |
 |---|---|---|
 | M01 | Android shell + Orbit Snap + local records + test banner + ranking boundary | complete; core checks, lint and debug APK passed |
-| M02 | Color Break | next |
-| M03 | Twin Tap, true multi-touch | pending |
+| M02 | Color Break | implemented; 33 core checks passed; Android CI pending |
+| M03 | Twin Tap, true multi-touch | next |
 | M04 | Line Surf | pending |
 | M05 | Pocket Pulse | pending |
 | M06 | Stack Slice | pending |
@@ -26,9 +26,17 @@ GitHub Actions run **36012804556**, code commit **f4d2b71242fd65f1bf18a3caa768c1
 
 The initial CI failed because setup-android tried the retired SDK package `tools`. Specifying `platform-tools` fixed setup; the subsequent complete build passed. XML parsing and git whitespace checks also passed. No emulator/device UI or actual ad-display pass is claimed. This checkpoint changes documentation only after the verified code commit.
 
+## M02 implemented and validation
+
+2026-09-24: Native Color Break engine/View, two rising color lanes, left/right taps, redundant number cues, combo scoring, three lives, 60-second cutoff, gradual acceleration, pause/resume, result/retry and per-game records. Shared GameView lifecycle and run-ID guarded result routing preserve Orbit functionality. Color board fits its entire logical area into available width and height; actual device layout has not been checked.
+
+`bash scripts/test-core.sh`: **33 checks passed** (15 prior checks + 18 Color Break/catalog checks). Covers valid start, unique matching lane, crossing-only judgement, last-moment lane change, no duplicate scoring, combo bonus/reset/cap, pause during recovery, READY pause, three misses, terminal input, exact 60s, speed bounds, 60/120Hz and delayed-frame consistency, invalid deltas and unlock scope. `git diff --check` passed.
+
+Local `gradle :app:lintDebug :app:assembleDebug` attempted but unavailable: `gradle: command not found`; no local Android SDK. GitHub Actions for the M02 code commit must be checked before calling Android validation complete. No device/emulator play, installed APK, real touch, persistence across process restarts or actual test-ad impression is claimed.
+
 ## Known limits / next
 
-- M02: implement Color Break and add engine tests for lane matching, combo reset, wall crossing and completion. Wire through the shared shell without breaking Orbit.
+- M03: implement Twin Tap with genuine multi-pointer handling, simultaneous-note judgement and timing-window regression tests; reuse the shared shell and preserve both playable games.
 - M07: Activity recreation currently returns home and loses an unfinished round; add proper saved state or a clearly designed abandonment flow before release. Rotation/tablet/landscape rendering not manually verified.
 - Canvas visual/game feel and actual test ad rendering still require emulator/device QA.
 - Gradle wrapper is not yet committed; CI installs exact Gradle 8.11.1. Add standard wrapper in an environment with Gradle.

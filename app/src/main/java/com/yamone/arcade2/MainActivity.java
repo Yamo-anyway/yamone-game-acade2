@@ -22,10 +22,13 @@ import android.widget.TextView;
 import android.window.OnBackInvokedDispatcher;
 import com.yamone.arcade2.core.GameId;
 import com.yamone.arcade2.core.OrbitEngine;
+import com.yamone.arcade2.core.ColorBreakEngine;
 import com.yamone.arcade2.data.LocalStore;
 import com.yamone.arcade2.data.RankingGateway;
 import com.yamone.arcade2.ui.BannerSlot;
 import com.yamone.arcade2.ui.OrbitView;
+import com.yamone.arcade2.ui.GameView;
+import com.yamone.arcade2.ui.ColorBreakView;
 import java.util.UUID;
 
 public final class MainActivity extends Activity {
@@ -34,7 +37,8 @@ public final class MainActivity extends Activity {
     private FrameLayout content;
     private LocalStore store;
     private BannerSlot banner;
-    private OrbitView gameView;
+    private GameView gameView;
+    private GameId activeGame = GameId.ORBIT_SNAP;
     private String screen = "home", runId;
     private final RankingGateway ranking = new RankingGateway.Disabled();
 
@@ -78,7 +82,7 @@ public final class MainActivity extends Activity {
         featured.addView(text("오늘의 도전    ·    ORBIT SNAP", 10, MINT)); gap(featured, 10);
         featured.addView(text("딱, 그 순간에 점프.", 22, TEXT)); gap(featured, 7);
         featured.addView(text("최고 " + store.best(GameId.ORBIT_SNAP) + "점  ·  " + store.plays(GameId.ORBIT_SNAP) + "회 플레이", 12, MUTED)); gap(featured, 15);
-        featured.addView(button("오비트 스냅 시작  →", MINT, BG, this::instructions)); p.addView(featured); gap(p, 23);
+        featured.addView(button("오비트 스냅 시작  →", MINT, BG, () -> instructions(GameId.ORBIT_SNAP))); p.addView(featured); gap(p, 23);
         p.addView(text("6개의 작은 도전", 16, TEXT)); gap(p, 12);
         for (GameId game : GameId.values()) {
             LinearLayout card = row(); card.setPadding(dp(15), dp(16), dp(15), dp(16)); card.setBackground(shape(PANEL, 17));
@@ -87,25 +91,38 @@ public final class MainActivity extends Activity {
             LinearLayout lines = column(); lines.addView(text(game.title, 17, TEXT)); gap(lines, 5); lines.addView(text(game.tagline, 11, MUTED)); gap(lines, 6); lines.addView(text(game.gesture, 10, game.color));
             card.addView(lines, new LinearLayout.LayoutParams(0, -2, 1));
             card.addView(text(game.ready ? "플레이 ›" : "준비 중", 11, game.ready ? MINT : MUTED));
-            if (game.ready) { card.setOnClickListener(v -> instructions()); card.setContentDescription(game.title + " 시작"); }
+            if (game.ready) { card.setOnClickListener(v -> instructions(game)); card.setContentDescription(game.title + " 시작"); }
             else card.setContentDescription(game.title + ", 준비 중");
             p.addView(card, new LinearLayout.LayoutParams(-1, -2)); gap(p, 9);
         }
     }
-    private void instructions() {
-        new AlertDialog.Builder(this).setTitle("오비트 스냅")
-            .setMessage("1. 화면을 꾹 누르면 점이 원을 돌아요.\n2. 민트 구간에 들어오면 손을 떼세요.\n3. 정확히 맞추면 +150점, 통과하면 +100점!\n\n한 궤도에서 너무 오래 머물면 기회가 줄어요. 3번 실수하거나 60초가 지나면 종료됩니다.")
-            .setPositiveButton("시작", (d, w) -> startOrbit()).setNegativeButton("닫기", null).show();
+    private void instructions(GameId game) {
+        String hint = game == GameId.COLOR_BREAK
+            ? "1. 화면 왼쪽 / 오른쪽을 탭해 이동해요.\n2. 아래에서 올라오는 벽 중 내 공과 같은 색·숫자로 통과하세요.\n3. 연속 성공하면 콤보 보너스!\n\n벽이 바뀔 때 내 공 색도 바뀌어요. 통과 +100점, 콤보 보너스 최대 +100점. 3번 실수하거나 60초가 지나면 종료됩니다."
+            : "1. 화면을 꾹 누르면 점이 원을 돌아요.\n2. 민트 구간에 들어오면 손을 떼세요.\n3. 정확히 맞추면 +150점, 통과하면 +100점!\n\n한 궤도에서 너무 오래 머물면 기회가 줄어요. 3번 실수하거나 60초가 지나면 종료됩니다.";
+        new AlertDialog.Builder(this).setTitle(game.title).setMessage(hint)
+            .setPositiveButton("시작", (d, w) -> startGame(game)).setNegativeButton("닫기", null).show();
     }
-    private void startOrbit() {
+    private void startGame(GameId game) {
+        if (!game.ready) return;
         if (gameView != null) gameView.setForeground(false);
+        activeGame = game;
         content.removeAllViews(); nav.setVisibility(View.GONE); screen = "game";
         LinearLayout layout = column(); LinearLayout header = row(); header.setPadding(dp(15), dp(8), dp(15), dp(6));
-        header.addView(text("오비트 스냅", 16, TEXT), new LinearLayout.LayoutParams(0, -2, 1));
+        header.addView(text(game.title, 16, TEXT), new LinearLayout.LayoutParams(0, -2, 1));
         Button pause = button("일시정지", PANEL, MUTED, this::pauseMenu); pause.setTextSize(11); header.addView(pause, new LinearLayout.LayoutParams(dp(98), dp(48)));
         layout.addView(header);
         runId = UUID.randomUUID().toString();
-        gameView = new OrbitView(this, new OrbitEngine(System.nanoTime()), store.haptics(), this::result);
+        String currentRun = runId;
+        if (game == GameId.COLOR_BREAK) {
+            gameView = new ColorBreakView(this, new ColorBreakEngine(System.nanoTime()), store.haptics(), engine ->
+                result(currentRun, game, engine.score(), engine.remaining() == 0,
+                    "벽 통과 " + engine.passed() + "회   ·   최고 콤보 " + engine.bestCombo() + "회"));
+        } else {
+            gameView = new OrbitView(this, new OrbitEngine(System.nanoTime()), store.haptics(), engine ->
+                result(currentRun, game, engine.score(), engine.remaining() == 0,
+                    "궤도 통과 " + engine.jumps() + "회   ·   PERFECT " + engine.perfects() + "회"));
+        }
         layout.addView(gameView, new LinearLayout.LayoutParams(-1, 0, 1)); content.addView(layout);
     }
     private void pauseMenu() {
@@ -113,19 +130,19 @@ public final class MainActivity extends Activity {
         gameView.pauseGame();
         new AlertDialog.Builder(this).setTitle("잠시 쉬어갈까요?").setMessage("계속하면 현재 기록을 이어갑니다.")
             .setPositiveButton("계속", (d, w) -> { if (gameView != null) gameView.resumeGame(); })
-            .setNeutralButton("다시 시작", (d, w) -> startOrbit())
+            .setNeutralButton("다시 시작", (d, w) -> startGame(activeGame))
             .setNegativeButton("홈으로", (d, w) -> home()).show();
     }
-    private void result(OrbitEngine engine) {
-        if (!"game".equals(screen) || gameView == null || gameView.engine() != engine) return;
-        boolean record = store.saveResult(GameId.ORBIT_SNAP, runId, engine.score());
+    private void result(String completedRun, GameId game, int score, boolean completed, String detail) {
+        if (!"game".equals(screen) || gameView == null || !completedRun.equals(runId)) return;
+        boolean record = store.saveResult(game, completedRun, score);
         LinearLayout p = page("result"); gap(p, 25);
         p.addView(text(record ? "NEW BEST!" : "NICE PLAY!", 14, MINT)); gap(p, 17);
-        p.addView(text(engine.remaining() == 0 ? "60초, 완주했어요." : "한 번 더 도전해볼까요?", 24, TEXT)); gap(p, 20);
-        p.addView(text(Integer.toString(engine.score()), 66, TEXT)); p.addView(text("이번 점수", 12, MUTED)); gap(p, 25);
-        p.addView(text("궤도 통과 " + engine.jumps() + "회   ·   PERFECT " + engine.perfects() + "회", 14, MINT)); gap(p, 13);
-        p.addView(text("내 최고기록  " + store.best(GameId.ORBIT_SNAP) + "점", 17, TEXT)); gap(p, 30);
-        p.addView(button("한 판 더", MINT, BG, this::startOrbit)); gap(p, 10);
+        p.addView(text(completed ? "60초, 완주했어요." : "한 번 더 도전해볼까요?", 24, TEXT)); gap(p, 20);
+        p.addView(text(Integer.toString(score), 66, TEXT)); p.addView(text(game.title + " · 이번 점수", 12, MUTED)); gap(p, 25);
+        p.addView(text(detail, 14, MINT)); gap(p, 13);
+        p.addView(text("내 최고기록  " + store.best(game) + "점", 17, TEXT)); gap(p, 30);
+        p.addView(button("한 판 더", MINT, BG, () -> startGame(game))); gap(p, 10);
         p.addView(button("게임 고르기", PANEL, TEXT, this::home)); gap(p, 22);
         p.addView(text("기록이 이 기기에 저장됐어요.\n온라인 랭킹은 준비 중입니다.", 12, MUTED));
     }
