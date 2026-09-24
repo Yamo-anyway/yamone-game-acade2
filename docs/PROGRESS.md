@@ -10,7 +10,7 @@ Current stage: **M07 / v0.7.0**. Repository is the source of truth for subsequen
 | M04 | Line Surf | complete; 75 core checks, Android lint and debug APK passed |
 | M05 | Pocket Pulse | complete; 96 core checks, Android lint and debug APK passed |
 | M06 | Stack Slice | complete; 115 core checks, Android lint and debug APK passed |
-| M07 | Integration, lifecycle/aspect ratios, debug APK QA | implemented; 115 core + 17 integration checks passed locally, Android CI pending |
+| M07 | Integration, lifecycle/aspect ratios, debug APK QA | complete; 115 core + 17 integration checks, Android lint and debug APK passed |
 
 ## M01 implemented
 
@@ -96,9 +96,13 @@ Local installation ID creation, terminal results and record deletion now use syn
 
 `bash scripts/test-core.sh`: **115 checks passed**. `bash scripts/check-integration.sh`: **17 checks passed**, covering official debug test banner ID, release ad disablement, absence of interstitial/rewarded ads, no backup/cleartext traffic, rotation retention, process-recreation abandonment detection, terminal-result commit, empty disconnected ranking, all six width/height-fitted boards and full catalog unlock. `git diff --check` passed.
 
-Local Android lint/APK verification is unavailable because this environment has no Gradle or Android SDK. Exact-commit GitHub Actions verification is pending for this code checkpoint.
+Local Android lint/APK verification is unavailable because this environment has no Gradle or Android SDK.
+
+GitHub Actions run **36053687516**, exact code commit **18c011345223288ffee8c64aa163d9d977a719db**: **SUCCESS**. All 115 core checks, 17 integration-policy checks, `:app:lintDebug`, `:app:assembleDebug`, debug APK upload (`yamone-arcade2-debug`) and lint report upload passed. [M07 build result](https://github.com/Yamo-anyway/yamone-game-acade2/actions/runs/36053687516). This follow-up only records the verified result; application code is unchanged.
 
 No device/emulator play, installed APK, physical touch/rotation, process-kill recovery UI, screen-ratio QA or actual test-ad impression is claimed.
+
+All autonomously implementable client milestones M01–M07 are complete. Further release work is gated by physical-device QA and owner-provided production ad/ranking/store configuration, so scheduled development can pause without implying store readiness.
 
 ## Known limits / next
 
