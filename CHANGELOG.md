@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0 — 2026-09-25
+
+- Add playable Line Surf with hold-to-ride/release-to-jump input, deterministic gaps and obstacles, airborne physics, three lives and 60-second rounds.
+- Add distance plus clear-bonus scoring, clear combo, collision recovery arc, seeded spacing and gradually increasing speed.
+- Add fitted native Canvas course, parallax skyline, hazard preview, jump/landing feedback, pause/retry/result routing and per-game local records.
+- Add 23 Line Surf/catalog regression checks (75 total), covering input edges, pause, safe gaps/obstacles, collision/recovery, terminal state, exact round end, refresh-rate and delayed-frame consistency.
+- Local Java checks and whitespace validation passed. Local Android build unavailable (Gradle/SDK absent); exact-commit CI verification is recorded in PROGRESS.
+- Device jump feel/layout and actual test-ad display remain unverified; no production ads or ranking server connected.
+
 ## 0.3.0 — 2026-09-25
 
 - Add playable Twin Tap with two descending lanes, single/double notes, timing windows, PERFECT/HIT scoring, combo bonus, five lives and 60-second rounds.

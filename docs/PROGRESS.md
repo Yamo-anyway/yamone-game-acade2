@@ -1,14 +1,14 @@
 # Development progress
 
-Current stage: **M03 / v0.3.0**. Repository is the source of truth for subsequent hourly runs.
+Current stage: **M04 / v0.4.0**. Repository is the source of truth for subsequent hourly runs.
 
 | Milestone | Scope | State |
 |---|---|---|
 | M01 | Android shell + Orbit Snap + local records + test banner + ranking boundary | complete; core checks, lint and debug APK passed |
 | M02 | Color Break | complete; 33 core checks, Android lint and debug APK passed |
 | M03 | Twin Tap, true multi-touch | complete; 52 core checks, Android lint and debug APK passed |
-| M04 | Line Surf | next |
-| M05 | Pocket Pulse | pending |
+| M04 | Line Surf | implemented; 75 core checks passed; Android CI pending |
+| M05 | Pocket Pulse | next |
 | M06 | Stack Slice | pending |
 | M07 | Integration, lifecycle/aspect ratios, debug APK QA | pending |
 
@@ -50,9 +50,17 @@ GitHub Actions run **36026649428**, exact code commit **33593a4ebf26fbcf6c5229a1
 
 No device/emulator play, installed APK, physical multi-touch, screen-ratio QA or actual test-ad impression is claimed. The connected GitHub API published the verified source tree with a non-forced fast-forward update; local main was restored from the identical remote commit while retaining the original local commit on a checkpoint branch.
 
+## M04 implemented and validation
+
+2026-09-25: Native Line Surf engine/View, hold-to-ride/release-to-jump edges, deterministic gaps and raised obstacles, airborne physics, three lives, collision recovery, distance plus clear scoring, best clear combo, 60-second cutoff, gradual acceleration, pause/resume, result/retry and per-game records. Course art and parallax are derived from engine distance and do not mutate game rules.
+
+`bash scripts/test-core.sh`: **75 checks passed** (52 prior checks + 23 Line Surf/catalog checks). Coverage includes first-hold start, release jump, duplicate/canceled input, paused physics, fresh-hold resume, safe traversal of seeded gap and obstacle types, score composition, hazard bounds/reaction distance, crash/no-bonus behavior, three-crash finish, terminal input, READY pause, perfect 60-second completion, speed bound, 60/120Hz and delayed-frame collision consistency, invalid deltas and unlock scope. `git diff --check` passed.
+
+Local Android lint/APK verification is unavailable because this environment has no Gradle or Android SDK. GitHub Actions for the exact M04 code commit must pass before Android validation is complete. No device/emulator play, installed APK, physical jump timing, screen-ratio QA or actual test-ad impression is claimed.
+
 ## Known limits / next
 
-- M04: implement Line Surf hold-to-ride/release-to-jump mechanics, gaps/obstacles, distance score and deterministic collision regression tests; preserve all three playable games.
+- M05: implement Pocket Pulse expanding-ring timing, precision/combo scoring and deterministic timing regression tests; preserve all four playable games.
 - M07: Activity recreation currently returns home and loses an unfinished round; add proper saved state or a clearly designed abandonment flow before release. Rotation/tablet/landscape rendering not manually verified.
 - Canvas visual/game feel and actual test ad rendering still require emulator/device QA.
 - Gradle wrapper is not yet committed; CI installs exact Gradle 8.11.1. Add standard wrapper in an environment with Gradle.

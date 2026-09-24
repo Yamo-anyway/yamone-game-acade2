@@ -46,6 +46,16 @@ Exact numbers below are initial playable tuning, not a claim that the user fixed
 - 60 active seconds maximum; the time boundary wins over a deadline at the same instant. Pause freezes a partially completed double note and all timing. Resume taps do not judge a note. Finished games reject input.
 - Results include hits, successful double notes and best combo. Local score/play count uses the existing per-game store; ranking server and production ads remain disconnected.
 
+## Line Surf v1
+
+- The first press starts the active clock and holds the rider to the line. Releasing an armed press while grounded launches one jump; duplicate release, canceled touch and release without a fresh press cannot jump.
+- The course is deterministic from the run seed and presents one upcoming feature at a time: 58–90px gaps or 34–56px obstacles with 35–50px height. The next feature begins at least 250px beyond the previous end, with extra seeded spacing for reaction time.
+- The rider travels at 155px/s plus 1.35px/s for every elapsed second. Jump velocity is 285px/s with 520px/s² gravity. Landing in a gap or touching an obstacle below its top causes a crash.
+- A crash removes one of three lives, resets the clear combo, moves the failed feature behind the rider and gives a .65-second recovery window/arc. Three crashes end the round; no clear bonus is awarded for the failed feature.
+- Passing a feature awards one clear and increases best combo. Score is integer distance in meters (`floor(world pixels / 10)`) plus 100 per cleared feature. Distance cannot increase before the first press.
+- 60 active seconds maximum; round completion wins over a collision on the same simulation instant. Pause freezes distance, physics, hazards and time, cancels held input and requires a fresh press after resume. Finished games reject input.
+- Android Canvas draws the deterministic parallax course, gap/obstacle preview, rider height, lives, distance and touch state. Results include distance, clears and jumps; local records use the shared shell.
+
 ## Ads and records
 
 Only banners, no interstitial/rewarded ads, play limits, payments or account screens. Fixed banner strip separated from controls and system insets. Official test IDs in debug. Release ads disabled pending owner configuration and release prerequisites.

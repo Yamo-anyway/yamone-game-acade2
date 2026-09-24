@@ -2,6 +2,7 @@ import com.yamone.arcade2.core.GameId;
 import com.yamone.arcade2.core.OrbitEngine;
 import com.yamone.arcade2.core.ColorBreakEngine;
 import com.yamone.arcade2.core.TwinTapEngine;
+import com.yamone.arcade2.core.LineSurfEngine;
 import com.yamone.arcade2.data.RankingGateway;
 
 public final class CoreTests {
@@ -52,6 +53,7 @@ public final class CoreTests {
         check(GameId.values().length == 6, "catalog contains all six approved concepts");
         colorBreakTests();
         twinTapTests();
+        lineSurfTests();
         System.out.println("All " + passed + " core checks passed.");
     }
     private static int matchingLane(ColorBreakEngine e) { return e.laneColor(0) == e.targetColor() ? 0 : 1; }
@@ -108,7 +110,8 @@ public final class CoreTests {
         check(large.score() == a.score() && large.lives() == a.lives() && large.feedbackId() == a.feedbackId(), "color delayed frame cannot skip wall collision");
         at = ready.elapsed(); ready.tapLane(0); ready.advance(Double.NaN); ready.advance(Double.POSITIVE_INFINITY); ready.advance(-1); ready.advance(0);
         check(ready.elapsed() == at, "color invalid time deltas ignored");
-        check(GameId.ORBIT_SNAP.ready && GameId.COLOR_BREAK.ready && GameId.TWIN_TAP.ready && !GameId.LINE_SURF.ready, "only implemented games unlocked");
+        check(GameId.ORBIT_SNAP.ready && GameId.COLOR_BREAK.ready && GameId.TWIN_TAP.ready && GameId.LINE_SURF.ready
+            && !GameId.POCKET_PULSE.ready, "only implemented games unlocked");
     }
     private static void twinHit(TwinTapEngine e) {
         double wait = e.targetOffset();
@@ -184,5 +187,79 @@ public final class CoreTests {
             && Math.abs(large.elapsed() - a.elapsed()) < 1e-8, "twin delayed frame cannot skip note deadlines");
         at = ready.elapsed(); ready.start(); ready.advance(Double.NaN); ready.advance(Double.POSITIVE_INFINITY); ready.advance(-1); ready.advance(0);
         check(ready.elapsed() == at, "twin invalid time deltas ignored");
+    }
+    private static void surfClearNext(LineSurfEngine e) {
+        int serial = e.hazardSerial();
+        e.press();
+        int watchdog = 200000;
+        while (e.state() == LineSurfEngine.State.RUNNING && e.hazardDistance() > 60 && watchdog-- > 0) e.advance(.002);
+        if (watchdog <= 0) throw new AssertionError("Could not approach surf hazard");
+        e.release();
+        while (e.state() == LineSurfEngine.State.RUNNING && e.hazardSerial() == serial && watchdog-- > 0) e.advance(.002);
+        if (watchdog <= 0) throw new AssertionError("Could not resolve surf hazard");
+    }
+    private static void lineSurfTests() {
+        LineSurfEngine e = new LineSurfEngine(77);
+        e.advance(8);
+        check(e.state() == LineSurfEngine.State.READY && e.elapsed() == 0 && e.distance() == 0 && e.score() == 0, "surf waits for first hold without passive score");
+        e.press();
+        check(e.state() == LineSurfEngine.State.RUNNING && e.held(), "surf press starts line ride");
+        e.release();
+        check(e.airborne() && !e.held() && e.jumps() == 1 && e.velocity() > 0, "surf release launches jump");
+        e.release();
+        check(e.jumps() == 1, "surf duplicate release cannot double jump");
+
+        LineSurfEngine cancel = new LineSurfEngine(2); cancel.press(); cancel.cancelInput(); cancel.release();
+        check(!cancel.held() && !cancel.airborne() && cancel.jumps() == 0, "surf canceled touch never jumps");
+        cancel.press(); cancel.advance(.25); double at = cancel.elapsed(), distance = cancel.distance();
+        cancel.pause(); cancel.advance(30); cancel.release();
+        check(cancel.state() == LineSurfEngine.State.PAUSED && cancel.elapsed() == at && cancel.distance() == distance
+            && !cancel.held() && cancel.jumps() == 0, "surf pause freezes motion and cancels held input");
+        cancel.resume(); cancel.advance(.1);
+        check(cancel.elapsed() > at && !cancel.held(), "surf resume requires fresh hold before jump");
+
+        LineSurfEngine safe = new LineSurfEngine(19); safe.press();
+        boolean sawGap = false, sawObstacle = false;
+        for (int i = 0; i < 8 && (!sawGap || !sawObstacle); i++) {
+            sawGap |= safe.hazard() == LineSurfEngine.Hazard.GAP;
+            sawObstacle |= safe.hazard() == LineSurfEngine.Hazard.OBSTACLE;
+            int before = safe.cleared(); surfClearNext(safe);
+            check(safe.cleared() == before + 1 && safe.lives() == 3, "surf timed jump clears one hazard");
+        }
+        check(sawGap && sawObstacle && safe.bestCombo() == safe.cleared(), "surf deterministic course contains gaps and obstacles");
+        check(safe.score() == safe.distanceMeters() + safe.cleared() * 100, "surf score combines distance and cleared hazards");
+        check(safe.hazardWidth() >= 34 && safe.hazardWidth() <= 90 && safe.hazardDistance() > 200, "surf next hazard keeps bounded size and reaction distance");
+
+        LineSurfEngine crash = new LineSurfEngine(5); crash.press();
+        int watchdog = 200000;
+        while (crash.lives() == 3 && watchdog-- > 0) crash.advance(.002);
+        check(watchdog > 0 && crash.lives() == 2 && crash.crashes() == 1 && crash.cleared() == 0
+            && crash.feedback() == LineSurfEngine.Feedback.CRASH, "surf riding into hazard costs one life and no clear bonus");
+        crash.advance(60);
+        check(crash.state() == LineSurfEngine.State.FINISHED && crash.lives() == 0 && crash.crashes() == 3, "surf three crashes end round");
+        at = crash.elapsed(); int score = crash.score(); crash.press(); crash.release(); crash.advance(100);
+        check(crash.elapsed() == at && crash.score() == score && crash.state() == LineSurfEngine.State.FINISHED, "surf finished state rejects input and time");
+
+        LineSurfEngine ready = new LineSurfEngine(9); ready.pause(); ready.resume(); ready.advance(9);
+        check(ready.state() == LineSurfEngine.State.READY && ready.elapsed() == 0, "surf pause before start preserves ready state");
+        LineSurfEngine clock = new LineSurfEngine(13); clock.press();
+        while (clock.state() != LineSurfEngine.State.FINISHED) {
+            if (clock.hazardDistance() > 60) clock.advance(Math.min(.01, clock.remaining()));
+            else surfClearNext(clock);
+        }
+        check(clock.elapsed() == 60 && clock.lives() == 3 && clock.cleared() > 20 && clock.distanceMeters() > 900, "surf perfect play reaches exact 60 seconds");
+        check(clock.speed() > 155 && clock.speed() <= 236, "surf speed rises within configured bound");
+
+        LineSurfEngine a = new LineSurfEngine(123), b = new LineSurfEngine(123), large = new LineSurfEngine(123);
+        a.press(); b.press(); large.press();
+        for (int i = 0; i < 900; i++) a.advance(1.0 / 60);
+        for (int i = 0; i < 1800; i++) b.advance(1.0 / 120);
+        large.advance(15);
+        check(a.state() == b.state() && a.lives() == b.lives() && a.crashes() == b.crashes()
+            && Math.abs(a.elapsed() - b.elapsed()) < .01 && Math.abs(a.distance() - b.distance()) < 1, "surf 60Hz and 120Hz collision consistency");
+        check(large.state() == a.state() && large.lives() == a.lives() && large.crashes() == a.crashes()
+            && Math.abs(large.elapsed() - a.elapsed()) < .01 && Math.abs(large.distance() - a.distance()) < 1, "surf delayed frame cannot skip hazards");
+        at = ready.elapsed(); ready.press(); ready.advance(Double.NaN); ready.advance(Double.POSITIVE_INFINITY); ready.advance(-1); ready.advance(0);
+        check(ready.elapsed() == at, "surf invalid time deltas ignored");
     }
 }
