@@ -66,8 +66,9 @@ public final class StackSliceView extends GameView {
             float center = towerX + (float)engine.incomingCenter();
             float width = (float)engine.incomingWidth();
             fill(0xFF67D9FF); canvas.drawRoundRect(center - width / 2, y, center + width / 2, y + blockH - 2, 4, 4, paint);
-            stroke(0x88FFFFFF, 1.5f); canvas.drawLine(center - StackSliceEngine.CUT_WIDTH / 2, y, center - StackSliceEngine.CUT_WIDTH / 2, y + blockH - 2, paint);
-            canvas.drawLine(center + StackSliceEngine.CUT_WIDTH / 2, y, center + StackSliceEngine.CUT_WIDTH / 2, y + blockH - 2, paint);
+            float halfCut = (float)StackSliceEngine.CUT_WIDTH / 2;
+            stroke(0x88FFFFFF, 1.5f); canvas.drawLine(center - halfCut, y, center - halfCut, y + blockH - 2, paint);
+            canvas.drawLine(center + halfCut, y, center + halfCut, y + blockH - 2, paint);
         }
 
         float tilt = (float)Math.max(-1, Math.min(1, engine.tilt()));
