@@ -1,0 +1,29 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.yamone.arcade2'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'com.yamone.arcade2'
+        minSdk 26
+        targetSdk 36
+        versionCode 1
+        versionName '0.1.0'
+        manifestPlaceholders = [admobAppId: 'ca-app-pub-3940256099942544~3347511713']
+    }
+    buildFeatures { buildConfig true }
+    buildTypes {
+        debug { buildConfigField 'boolean', 'TEST_BANNER_ENABLED', 'true' }
+        release {
+            // Production ads stay disabled until the owner supplies production configuration.
+            buildConfigField 'boolean', 'TEST_BANNER_ENABLED', 'false'
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    lint { abortOnError true }
+}
+dependencies { implementation 'com.google.android.gms:play-services-ads:25.5.0' }
