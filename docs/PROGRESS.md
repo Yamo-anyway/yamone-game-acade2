@@ -8,7 +8,7 @@ Current stage: **M05 / v0.5.0**. Repository is the source of truth for subsequen
 | M02 | Color Break | complete; 33 core checks, Android lint and debug APK passed |
 | M03 | Twin Tap, true multi-touch | complete; 52 core checks, Android lint and debug APK passed |
 | M04 | Line Surf | complete; 75 core checks, Android lint and debug APK passed |
-| M05 | Pocket Pulse | implemented; 96 core checks passed; Android CI pending |
+| M05 | Pocket Pulse | complete; 96 core checks, Android lint and debug APK passed |
 | M06 | Stack Slice | next |
 | M07 | Integration, lifecycle/aspect ratios, debug APK QA | pending |
 
@@ -68,7 +68,11 @@ No device/emulator play, installed APK, physical jump timing, screen-ratio QA or
 
 `bash scripts/test-core.sh`: **96 checks passed** (75 prior checks + 21 Pocket Pulse/catalog checks). Coverage includes start-only first tap, deterministic target bounds, exact PERFECT, GREAT/GOOD score and combo boundaries, recovery duplicate suppression, early and automatic late misses, one-target-per-recovery, paused wave/recovery, READY pause, four-miss finish, terminal input, perfect 60-second completion, capped combo growth, speed bound, 60/120Hz and delayed-frame deadline consistency, invalid deltas and unlock scope. `git diff --check` passed.
 
-Local Android lint/APK verification is unavailable because this environment has no Gradle or Android SDK. GitHub Actions for the exact M05 code commit must pass before Android validation is complete. No device/emulator play, installed APK, physical tap timing, screen-ratio QA or actual test-ad impression is claimed.
+Local Android lint/APK verification is unavailable because this environment has no Gradle or Android SDK.
+
+GitHub Actions run **36040393143**, exact code commit **5608dc39e00ddd110e2fe2be223136e3881ac3fb**: **SUCCESS**. All 96 core checks, `:app:lintDebug`, `:app:assembleDebug`, debug APK upload (`yamone-arcade2-debug`) and lint report upload passed. [M05 build result](https://github.com/Yamo-anyway/yamone-game-acade2/actions/runs/36040393143). This follow-up only records the verified result; application code is unchanged.
+
+No device/emulator play, installed APK, physical tap timing, screen-ratio QA or actual test-ad impression is claimed. The connected GitHub API published the verified source tree with a non-forced fast-forward update; local main was restored from the identical remote commit while retaining the original local commit on a checkpoint branch.
 
 ## Known limits / next
 
