@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.0 — 2026-09-28
+
+- Add idempotent game-start and game-finish receipts so actual attempts, completions, per-game users, app source and country totals can be measured without double-counting offline retries.
+- Add a shared D1 game catalog with app-specific visibility, featured game, manual order and recent/lifetime popularity sort modes; Android applies known-game changes on launch/resume.
+- Add per-game ranking epochs so a reset cannot be undone by delayed pre-reset uploads, plus an optional local-reset epoch for clearing that game's device best on next sync.
+- Add the authenticated Cloudflare `/admin` dashboard for summary/game/country statistics, game add/edit/hide/order, ranking reset and an audit log.
+- Keep existing ranking routes and all legacy Yamone game/mode IDs compatible; detailed play identity remains an HMAC hash and app-local player IDs are never merged.
+- Expand executable validation to 29 Android integration checks plus repeatable D1 migration and Worker/Admin contract checks; retain all 115 game-engine checks.
+
 ## 0.8.0 — 2026-09-28
 
 - Connect all six stable game IDs to the existing Yamone Games Cloudflare Worker and shared D1 leaderboard using `normal` mode and `points` units.

@@ -39,6 +39,7 @@ import com.yamone.arcade2.ui.TwinTapView;
 import com.yamone.arcade2.ui.LineSurfView;
 import com.yamone.arcade2.ui.PocketPulseView;
 import com.yamone.arcade2.ui.StackSliceView;
+import java.util.List;
 import java.util.UUID;
 
 public final class MainActivity extends Activity {
@@ -52,6 +53,7 @@ public final class MainActivity extends Activity {
     private GameId activeGame = GameId.ORBIT_SNAP;
     private GameId rankingGame = GameId.ORBIT_SNAP;
     private String screen = "home", runId;
+    private int runRankingEpoch = 1;
     private OnlineRankingRepository ranking;
 
     @Override public void onCreate(Bundle savedInstanceState) {
@@ -72,7 +74,12 @@ public final class MainActivity extends Activity {
         root.addView(nav);
         View separator = new View(this); separator.setBackgroundColor(BG); root.addView(separator, new LinearLayout.LayoutParams(-1, dp(12)));
         banner = new BannerSlot(this); root.addView(banner, new LinearLayout.LayoutParams(-1, -2));
-        setContentView(root); root.requestApplyInsets(); restoreDestination(savedInstanceState);
+        setContentView(root); root.requestApplyInsets();
+        ranking.setCatalogChangedListener(() -> {
+            if ("home".equals(screen)) home();
+            else if ("rankings".equals(screen)) rankings();
+        });
+        restoreDestination(savedInstanceState);
         ranking.initialize();
         if (Build.VERSION.SDK_INT >= 33) getOnBackInvokedDispatcher().registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::handleBack);
     }
@@ -103,19 +110,22 @@ public final class MainActivity extends Activity {
     }
     private void home() {
         LinearLayout p = page("home");
+        GameId featuredGame = store.featuredGame();
+        List<GameId> visibleGames = store.visibleGames();
         p.addView(text("YAMONE / ARCADE 02", 11, MINT)); gap(p, 10);
         p.addView(text("잠깐, 한 판 어때요?", 27, TEXT)); gap(p, 8);
         p.addView(text("60초의 몰입. 손끝으로 만드는 기록.", 13, MUTED)); gap(p, 23);
         LinearLayout featured = column(); featured.setPadding(dp(18), dp(18), dp(18), dp(18));
         featured.setBackground(shape(0xFF183039, 22));
-        featured.addView(text("오늘의 도전    ·    ORBIT SNAP", 10, MINT)); gap(featured, 10);
-        featured.addView(text("딱, 그 순간에 점프.", 22, TEXT)); gap(featured, 7);
-        featured.addView(text("최고 " + store.best(GameId.ORBIT_SNAP) + "점  ·  " + store.plays(GameId.ORBIT_SNAP) + "회 플레이", 12, MUTED)); gap(featured, 15);
-        featured.addView(button("오비트 스냅 시작  →", MINT, BG, () -> instructions(GameId.ORBIT_SNAP))); p.addView(featured); gap(p, 23);
-        p.addView(text("6개의 작은 도전", 16, TEXT)); gap(p, 12);
-        for (GameId game : GameId.values()) {
+        featured.addView(text("오늘의 도전    ·    " + featuredGame.key.toUpperCase(java.util.Locale.US), 10, MINT)); gap(featured, 10);
+        featured.addView(text(featuredGame.tagline, 22, TEXT)); gap(featured, 7);
+        featured.addView(text("최고 " + store.best(featuredGame) + "점  ·  " + store.plays(featuredGame) + "회 플레이", 12, MUTED)); gap(featured, 15);
+        featured.addView(button(featuredGame.title + " 시작  →", MINT, BG, () -> instructions(featuredGame))); p.addView(featured); gap(p, 23);
+        p.addView(text(visibleGames.size() + "개의 작은 도전", 16, TEXT)); gap(p, 12);
+        int position = 0;
+        for (GameId game : visibleGames) {
             LinearLayout card = row(); card.setPadding(dp(15), dp(16), dp(15), dp(16)); card.setBackground(shape(PANEL, 17));
-            TextView num = text(String.format(java.util.Locale.ROOT, "%02d", game.ordinal() + 1), 21, game.color);
+            TextView num = text(String.format(java.util.Locale.ROOT, "%02d", ++position), 21, game.color);
             card.addView(num, new LinearLayout.LayoutParams(dp(42), -2));
             LinearLayout lines = column(); lines.addView(text(game.title, 17, TEXT)); gap(lines, 5); lines.addView(text(game.tagline, 11, MUTED)); gap(lines, 6); lines.addView(text(game.gesture, 10, game.color));
             card.addView(lines, new LinearLayout.LayoutParams(0, -2, 1));
@@ -138,7 +148,7 @@ public final class MainActivity extends Activity {
             .setPositiveButton("시작", (d, w) -> startGame(game)).setNegativeButton("닫기", null).show();
     }
     private void startGame(GameId game) {
-        if (!game.ready) return;
+        if (!game.ready || !store.gameEnabled(game)) return;
         if (gameView != null) gameView.setForeground(false);
         activeGame = game;
         content.removeAllViews(); nav.setVisibility(View.GONE); screen = "game";
@@ -148,6 +158,8 @@ public final class MainActivity extends Activity {
         layout.addView(header);
         runId = UUID.randomUUID().toString();
         String currentRun = runId;
+        runRankingEpoch = store.rankingEpoch(game);
+        ranking.playStarted(game, currentRun, runRankingEpoch);
         if (game == GameId.COLOR_BREAK) {
             gameView = new ColorBreakView(this, new ColorBreakEngine(System.nanoTime()), store.haptics(), engine ->
                 result(currentRun, game, engine.score(), engine.remaining() == 0,
@@ -185,8 +197,9 @@ public final class MainActivity extends Activity {
     }
     private void result(String completedRun, GameId game, int score, boolean completed, String detail) {
         if (!"game".equals(screen) || gameView == null || !completedRun.equals(runId)) return;
-        boolean record = store.saveResult(game, completedRun, score);
+        boolean record = store.saveResult(game, completedRun, score, runRankingEpoch);
         if (record) ranking.submitBest(game, store.best(game));
+        else ranking.syncPending();
         LinearLayout p = page("result"); gap(p, 25);
         p.addView(text(record ? "NEW BEST!" : "NICE PLAY!", 14, MINT)); gap(p, 17);
         p.addView(text(completed ? "60초, 완주했어요." : "한 번 더 도전해볼까요?", 24, TEXT)); gap(p, 20);
@@ -203,22 +216,25 @@ public final class MainActivity extends Activity {
         rankings(rankingGame);
     }
     private void rankings(GameId selected) {
+        List<GameId> visibleGames = store.visibleGames();
+        if (visibleGames.isEmpty()) { home(); return; }
+        if (!visibleGames.contains(selected)) selected = visibleGames.get(0);
+        final GameId selectedGame = selected;
         rankingGame = selected;
         LinearLayout p = page("rankings");
         p.addView(text("게임별 랭킹", 28, TEXT)); gap(p, 8);
         p.addView(text("같은 게임·같은 모드의 최고기록으로 순위를 정해요.", 13, MUTED)); gap(p, 18);
-        GameId[] games = GameId.values();
-        for (int index = 0; index < games.length; index += 2) {
+        for (int index = 0; index < visibleGames.size(); index += 2) {
             LinearLayout choices = row();
             for (int column = 0; column < 2; column++) {
                 int item = index + column;
-                if (item >= games.length) {
+                if (item >= visibleGames.size()) {
                     choices.addView(new View(this), new LinearLayout.LayoutParams(0, dp(48), 1));
                     continue;
                 }
-                GameId game = games[item];
-                Button option = button(game.title, game == selected ? game.color : PANEL,
-                    game == selected ? BG : TEXT, () -> rankings(game));
+                GameId game = visibleGames.get(item);
+                Button option = button(game.title, game == selectedGame ? game.color : PANEL,
+                    game == selectedGame ? BG : TEXT, () -> rankings(game));
                 option.setTextSize(11);
                 LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(48), 1);
                 params.setMargins(column == 0 ? 0 : dp(4), dp(3), column == 0 ? dp(4) : 0, dp(3));
@@ -228,14 +244,14 @@ public final class MainActivity extends Activity {
         }
         gap(p, 18);
         LinearLayout local = column(); local.setBackground(shape(PANEL, 16)); local.setPadding(dp(17), dp(17), dp(17), dp(17));
-        local.addView(text(selected.title + " · 내 기기 최고기록", 14, selected.color)); gap(local, 8);
-        local.addView(text(store.plays(selected) == 0 ? "아직 기록이 없어요" : store.best(selected) + "점", 24, TEXT));
+        local.addView(text(selectedGame.title + " · 내 기기 최고기록", 14, selectedGame.color)); gap(local, 8);
+        local.addView(text(store.plays(selectedGame) == 0 ? "아직 기록이 없어요" : store.best(selectedGame) + "점", 24, TEXT));
         p.addView(local); gap(p, 20);
         LinearLayout online = column();
         online.addView(text("온라인 순위를 불러오는 중…", 14, MUTED));
         p.addView(online);
-        ranking.load(selected, (status, board) -> {
-            if (!"rankings".equals(screen) || rankingGame != selected) return;
+        ranking.load(selectedGame, (status, board) -> {
+            if (!"rankings".equals(screen) || rankingGame != selectedGame) return;
             renderOnlineRanking(online, status, board);
         });
     }

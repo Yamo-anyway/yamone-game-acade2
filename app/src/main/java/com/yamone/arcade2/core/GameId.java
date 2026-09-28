@@ -15,4 +15,10 @@ public enum GameId {
         this.key = key; this.title = title; this.tagline = tagline;
         this.gesture = gesture; this.color = color; this.ready = ready;
     }
+
+    public static GameId fromKey(String key) {
+        if (key == null) return null;
+        for (GameId game : values()) if (game.key.equals(key)) return game;
+        return null;
+    }
 }

@@ -81,6 +81,21 @@ Only banners, no interstitial/rewarded ads, play limits, payments or account scr
 
 Local best scores and online ranking use the same stable game IDs. The shared Worker stores one best entry for each installation player ID, game and `normal` mode, with `points` as the score unit. Rankings show the top 100, the current player and nearby entries. Failed best-score uploads and deletion requests remain pending locally and retry after reconnection. App reinstall clears identity and data; Android backup is disabled to avoid promising identity transfer.
 
+Every started run also has a UUID play receipt. Started and finished events are
+queued independently, survive offline/process restarts, and are idempotent on
+the server. Statistics retain app ID, hashed installation identity, country,
+game/mode, start/completion and score without merging identities across apps.
+
+The Worker-managed catalog controls known-game visibility, placement and the
+featured game. Manual, recent-seven-day popularity and lifetime-popularity sort
+modes are available. Registering a brand-new game ID does not download game
+code; an Android update must implement that ID before the client displays it.
+
+Ranking reset advances a per-game epoch before deleting the selected board.
+Offline scores from an older epoch never repopulate it. An optional separate
+local-reset epoch clears the device's best score on its next sync while keeping
+play-count analytics.
+
 ## Integration and lifecycle v1
 
 - Every game board fits both the available width and height against the same 360×520 logical canvas. Extra space is letterboxed; game touch coordinates remain owned by each View and never include the banner strip.

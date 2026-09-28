@@ -1,0 +1,8 @@
+name = "yamone-games-ranking-api"
+main = "src/index.js"
+compatibility_date = "2026-09-28"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "yamone-games-ranking"
+database_id = "83651d75-9f73-429e-a14f-066530a1c68d"

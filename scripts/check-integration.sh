@@ -24,7 +24,7 @@ check_fixed app/src/main/AndroidManifest.xml 'android:configChanges="orientation
   'rotation keeps active game instance'
 check_fixed app/src/main/java/com/yamone/arcade2/MainActivity.java 'STATE_ACTIVE_RUN' \
   'process recreation detects abandoned active run'
-check_fixed app/src/main/java/com/yamone/arcade2/data/LocalStore.java '.putInt("plays_" + game.key, previousPlays + 1).commit()' \
+check_fixed app/src/main/java/com/yamone/arcade2/data/LocalStore.java '.putInt("plays_" + game.key, previousPlays + 1).putStringSet(PENDING_PLAYS, pending);' \
   'terminal result is committed synchronously'
 check_fixed app/src/main/java/com/yamone/arcade2/data/OnlineRankingRepository.java \
   'https://yamone-games-ranking-api.yamone-game.workers.dev' 'shared Cloudflare ranking endpoint configured'
@@ -38,6 +38,20 @@ check_fixed app/src/main/java/com/yamone/arcade2/data/OnlineRankingRepository.ja
   'store.clearPendingRanking(game, score);' 'successful score upload clears durable pending value'
 check_fixed app/src/main/java/com/yamone/arcade2/MainActivity.java \
   'renderOnlineRanking' 'game-specific online leaderboard UI connected'
+check_fixed app/src/main/java/com/yamone/arcade2/data/OnlineRankingRepository.java \
+  'body.put("eventType", event.eventType);' 'start and finish play events upload separately'
+check_fixed app/src/main/java/com/yamone/arcade2/data/LocalStore.java \
+  'ranking_play_events' 'offline play event queue is durable'
+check_fixed app/src/main/java/com/yamone/arcade2/data/OnlineRankingRepository.java \
+  'body.put("rankingEpoch", event.rankingEpoch);' 'play result carries its original ranking epoch'
+check_fixed app/src/main/java/com/yamone/arcade2/data/LocalStore.java \
+  'config.localResetEpoch > previousLocalReset' 'remote local-record reset is synchronized'
+check_fixed app/src/main/java/com/yamone/arcade2/MainActivity.java \
+  'store.visibleGames()' 'remote catalog controls game visibility and order'
+check_fixed cloudflare/src/index.js \
+  '/v1/admin/rankings/reset' 'admin ranking reset endpoint exists'
+check_fixed cloudflare/src/admin-page.js \
+  '국가별 통계' 'admin country statistics UI exists'
 
 views=(OrbitView ColorBreakView TwinTapView LineSurfView PocketPulseView StackSliceView)
 for view in "${views[@]}"; do

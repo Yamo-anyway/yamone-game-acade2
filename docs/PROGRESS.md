@@ -1,6 +1,6 @@
 # Development progress
 
-Current stage: **M08 / v0.8.0**. Repository is the source of truth for subsequent work.
+Current stage: **M09 / v0.9.0**. Repository is the source of truth for subsequent work.
 
 | Milestone | Scope | State |
 |---|---|---|
@@ -11,7 +11,29 @@ Current stage: **M08 / v0.8.0**. Repository is the source of truth for subsequen
 | M05 | Pocket Pulse | complete; 96 core checks, Android lint and debug APK passed |
 | M06 | Stack Slice | complete; 115 core checks, Android lint and debug APK passed |
 | M07 | Integration, lifecycle/aspect ratios, debug APK QA | complete; 115 core + 17 integration checks, Android lint and debug APK passed |
-| M08 | Shared Cloudflare game-by-game online ranking | implemented; 115 core + 22 integration checks passed locally; Android CI pending |
+| M08 | Shared Cloudflare game-by-game online ranking | complete; 115 core + 22 integration checks and Android CI passed |
+| M09 | Play analytics, remote catalog, ranking reset and admin dashboard | implemented locally; Cloudflare deployment and Android CI pending |
+
+## M09 implemented
+
+2026-09-28: Added an additive D1 migration and version-controlled Worker source
+for actual play starts/completions, per-player/game/app/country counters,
+idempotent offline receipts, remotely ordered/hidden catalog entries, ranking
+epochs and optional app-local record-reset epochs. Added the authenticated
+same-origin `/admin` dashboard for totals, game/country statistics, manual or
+popularity placement, catalog add/edit/hide and audited per-game ranking reset.
+
+Android v0.9.0 records a durable start before opening each board and a durable
+finish with its original epoch at the terminal result. It refreshes known-game
+visibility/order/featured state, retains unknown IDs for a future binary, and
+prevents pre-reset queued scores or lifetime local bests from restoring a new
+ranking season. A full online-data delete also clears pending play receipts.
+
+Local validation: **115 core checks**, **29 integration checks**, repeatable
+SQLite migration/seed check, Worker/Admin JavaScript syntax and contract checks,
+and `git diff --check` passed. No production D1 migration, Worker deployment,
+remote admin login, Android CI, device install or live play-stat smoke test is
+claimed yet.
 
 ## M01 implemented
 
