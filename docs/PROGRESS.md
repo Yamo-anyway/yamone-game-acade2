@@ -13,7 +13,7 @@ Current stage: **M10 / v0.10.0**. Repository is the source of truth for subseque
 | M07 | Integration, lifecycle/aspect ratios, debug APK QA | complete; 115 core + 17 integration checks, Android lint and debug APK passed |
 | M08 | Shared Cloudflare game-by-game online ranking | complete; 115 core + 22 integration checks and Android CI passed |
 | M09 | Play analytics, remote catalog, ranking reset and admin dashboard | complete; production migration/deployment, live smoke test and Android CI passed |
-| M10 | Pastel home, rankings and settings redesign | implemented; Android build and native visual QA pending |
+| M10 | Pastel home, rankings and settings redesign | complete; Android lint/APK, native emulator UI and visual review passed |
 
 ## M10 implementation
 
@@ -32,7 +32,17 @@ runner for native navigation and screenshots at standard and large-text sizes.
 Ranking names/scores in screenshot fixtures are test-only, never shipped in the
 app or uploaded to production. Initial Android lint caught an API-27-only theme
 attribute; removed it and retained the compatible runtime system-bar flags.
-Final exact-commit Android CI and screenshots pending.
+Final exact-commit GitHub Actions run **36381939004**, application commit
+**382e8c849f1b9eafc4542c7a00c85a7541f7d55e**: **SUCCESS**. The same
+checks, Android lint, debug APK and instrumentation APK assembly passed.
+Android 10 Pixel 2 emulator verified home/settings/ranking navigation and
+offline, empty and populated ranking states at **411dp / font 1.0** and
+**320dp / font 1.3**, producing 16 native screenshots. Representative home,
+game-grid, settings, podium and large-text list captures were visually reviewed.
+The preview runner asserts the intended device width/font settings. APK ZIP
+SHA-256: `9ff51ebcd1792f58250e768f1e60ea960549842315741488f983dc8c3300d2fa`.
+No Cloudflare changes or production test data were needed. Physical-device
+gameplay, live networking and real ad rendering were not retested in this stage.
 
 ## M09 implemented
 
