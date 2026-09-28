@@ -40,7 +40,11 @@ Assertions now compare lives immediately before/after ignored input, and capture
 are collected even if a later assertion fails. The second CI run passed both
 emulator scenarios. Visual review then found the ring background covering the
 instruction on compact boards; the ring now fits between dedicated instruction
-and feedback regions. Final exact-commit CI for that layout fix is pending.
+and feedback regions. A further fixture edge case could advance a full turn when
+the live dot was already past the target center but still in the valid window;
+the driver now taps that window directly and resets its real-frame baseline before
+controlled advancement. Main-thread assertion details and logcat are retained.
+Final exact-commit CI is pending.
 
 Added `0004_orbit_snap_endless.sql` to increase only Orbit's max score to
 1,000,000,000 without deleting rows or changing reset epochs. Production D1

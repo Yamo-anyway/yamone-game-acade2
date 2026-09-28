@@ -133,12 +133,16 @@ public final class UiSmokeInstrumentation extends Instrumentation {
         runOnMainSync(() -> tap(board, board.getWidth()/2f, board.getHeight()-100));
         if (engine.lives() != pausedLives) throw new AssertionError("Paused board accepted input");
         navigate("계속 플레이");
-        runOnMainSync(() -> {
+        onMain(() -> {
             int livesBefore = engine.lives();
             tap(board, board.getWidth()/2f, 20);
             if (engine.lives() != livesBefore || engine.score() != 0) throw new AssertionError("Score area incorrectly judges a tap");
+            // Reset the View's real-frame baseline before driving controlled engine time.
+            board.pauseGame(); board.resumeGame();
             for (int i=0; i<20; i++) {
-                engine.advance(((engine.target()-engine.angle()+360)%360) / engine.speed());
+                // A screenshot may leave the dot past the center but inside the window.
+                // Tap that valid window now instead of advancing a whole extra revolution.
+                if (!engine.inTarget()) engine.advance(((engine.target()-engine.angle()+360)%360) / engine.speed());
                 float scale = Math.min(board.getWidth()/360f, board.getHeight()/500f);
                 tap(board, board.getWidth()/2f, board.getHeight()-42*scale);
             }
@@ -172,6 +176,11 @@ public final class UiSmokeInstrumentation extends Instrumentation {
             throw new AssertionError("Orbit retry must reset score/lives and rotate immediately");
         navigate("일시정지"); navigate("홈으로");
         if (local.plays(GameId.ORBIT_SNAP) != previousPlays+1) throw new AssertionError("Orbit abandoned retry saved a false result");
+    }
+    private void onMain(Runnable task) {
+        Throwable[] failure = new Throwable[1];
+        runOnMainSync(() -> { try { task.run(); } catch (Throwable error) { failure[0] = error; } });
+        if (failure[0] != null) throw new AssertionError("Main-thread UI assertion", failure[0]);
     }
     private void pad(ColorBreakView board, int lane) {
         float scale = Math.min(board.getWidth()/360f, board.getHeight()/480f);
