@@ -55,3 +55,12 @@ redeploy is required for this data-only change. Existing admin max-score setting
 can also be used to raise the same row. Until applied, scores above 100,000 stay
 local/pending; the existing server rejects them. The old test leaderboard is not
 automatically reset—use the existing admin reset when the owner chooses to do so.
+
+## Orbit Snap v0.12.0 score ceiling
+
+After pulling the latest main, run the same migration command above.
+`0004_orbit_snap_endless.sql` raises `orbit_snap / normal` to 1,000,000,000
+points for endless play, retaining leaderboard records and both reset epochs.
+No Worker deploy or new secret is needed. Scores above 100,000 remain pending
+until this migration is applied. Any still-pending Color Break migration is
+applied by the same command. These migrations never clear test records.

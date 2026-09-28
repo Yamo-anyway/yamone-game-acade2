@@ -14,41 +14,11 @@ public final class CoreTests {
         passed++; System.out.println("PASS " + name);
     }
     private static void hit(OrbitEngine e) {
-        e.press();
-        int watchdog = 5000;
-        while (e.state() != OrbitEngine.State.FINISHED && OrbitEngine.angularDistance(e.angle(), e.target()) > 2 && watchdog-- > 0) e.advance(.002);
-        if (watchdog <= 0) throw new AssertionError("Could not reach target");
-        e.release();
+        e.advance(((e.target() - e.angle() + 360) % 360) / e.speed());
+        e.tap();
     }
     public static void main(String[] args) {
-        OrbitEngine e = new OrbitEngine(77);
-        e.advance(10);
-        check(e.elapsed() == 0 && e.state() == OrbitEngine.State.READY, "clock waits for first touch");
-        hit(e);
-        check(e.score() == 150 && e.jumps() == 1 && e.perfects() == 1, "accurate release awards perfect");
-        e.release(); e.release();
-        check(e.score() == 150 && e.lives() == 3, "duplicate releases cannot award score");
-        e.advance(.4); e.press(); e.cancelInput(); e.release();
-        check(e.jumps() == 1 && e.lives() == 3, "touch cancellation never fires jump");
-        double at = e.elapsed(); e.pause(); e.advance(45); e.press(); e.release();
-        check(e.elapsed() == at && e.state() == OrbitEngine.State.PAUSED && !e.held(), "background pause freezes timer and input");
-        e.resume(); e.advance(.1);
-        check(e.elapsed() > at && !e.held(), "resume requires fresh touch");
-        OrbitEngine idle = new OrbitEngine(1); idle.press(); idle.cancelInput(); idle.advance(60);
-        check(idle.state() == OrbitEngine.State.FINISHED && idle.lives() == 0 && idle.score() == 0, "idle camping ends with zero score");
-        int score = e.score(); e.advance(1000); e.press(); e.release(); e.advance(10);
-        check(e.state() == OrbitEngine.State.FINISHED && e.score() == score, "finished games reject input");
-        OrbitEngine clock = new OrbitEngine(9);
-        while (clock.state() != OrbitEngine.State.FINISHED) {
-            hit(clock); clock.advance(.33);
-        }
-        check(clock.elapsed() == 60 && clock.lives() == 3 && clock.score() > 0, "successful play stops at exactly 60 seconds");
-        check(OrbitEngine.angularDistance(359, 1) == 2 && OrbitEngine.angularDistance(-1, 361) == 2, "angle wrap handles gate crossing");
-        OrbitEngine a = new OrbitEngine(123), b = new OrbitEngine(123);
-        a.press(); b.press(); for (int i = 0; i < 60; i++) a.advance(1.0 / 60); for (int i = 0; i < 120; i++) b.advance(1.0 / 120);
-        check(Math.abs(a.angle() - b.angle()) < .02 && Math.abs(a.elapsed() - b.elapsed()) < .0001, "frame rate independent motion");
-        at = a.elapsed(); a.advance(Double.NaN); a.advance(Double.POSITIVE_INFINITY); a.advance(-1);
-        check(a.elapsed() == at, "invalid deltas ignored");
+        orbitTests();
         RankingGateway.Board emptyBoard = new RankingGateway.Board(GameId.ORBIT_SNAP, -1, null, null, null);
         check(emptyBoard.totalPlayers == 0 && emptyBoard.top.isEmpty() && emptyBoard.nearby.isEmpty(), "empty ranking contract shows no fake entries");
         check("normal".equals(RankingGateway.MODE_ID) && "points".equals(RankingGateway.SCORE_UNIT), "ranking contract matches shared worker mode and unit");
@@ -59,6 +29,66 @@ public final class CoreTests {
         pocketPulseTests();
         stackSliceTests();
         System.out.println("All " + passed + " core checks passed.");
+    }
+    private static void orbitTests() {
+        OrbitEngine e = new OrbitEngine(77);
+        double angle = e.angle(); e.advance(.1);
+        check(e.state() == OrbitEngine.State.RUNNING && e.angle() != angle && e.lives() == 5, "orbit rotates automatically with five lives");
+        hit(e);
+        check(e.score() == 150 && e.jumps() == 1 && e.perfects() == 1, "orbit center tap awards perfect");
+        e.tap(); e.tap();
+        check(e.score() == 150 && e.lives() == 5, "orbit rapid repeat taps cannot double judge");
+        angle = e.angle(); e.advance(.08);
+        check(e.angle() != angle && e.feedbackRemaining() > 0, "orbit keeps rotating during hit feedback");
+        double at = e.elapsed(), cooldown = e.feedbackRemaining(); angle = e.angle();
+        e.pause(); e.pause(); e.advance(45); e.tap();
+        check(e.elapsed() == at && e.angle() == angle && e.feedbackRemaining() == cooldown && e.lives() == 5, "orbit pause freezes rotation feedback and input");
+        e.resume(); hit(e);
+        check(e.jumps() == 2 && e.bestCombo() == 2 && e.score() == 300, "orbit resumes automatic rotation and scoring");
+        e.advance(OrbitEngine.FEEDBACK_SECONDS); e.tap();
+        check(e.lives() == 4 && e.combo() == 0 && e.bestCombo() == 2 && e.score() == 300, "orbit early tap loses one life and resets combo");
+        OrbitEngine edge = new OrbitEngine(8);
+        edge.advance(((edge.target()-edge.angle()+360)%360 - edge.tolerance()) / edge.speed()); edge.tap();
+        check(edge.jumps() == 1 && edge.score() == 100 && edge.perfects() == 0, "orbit leading edge counts as normal hit");
+        OrbitEngine exit = new OrbitEngine(8);
+        exit.advance(((exit.target()-exit.angle()+360)%360 + exit.tolerance()) / exit.speed()); exit.tap();
+        check(exit.lives() == 4 && exit.feedbackId() == 1 && exit.score() == 0, "orbit passing trailing edge automatically misses exactly once");
+        OrbitEngine fail = new OrbitEngine(8);
+        for (int i=0; i<4; i++) { fail.tap(); fail.advance(OrbitEngine.FEEDBACK_SECONDS); }
+        check(fail.lives() == 1 && fail.state() == OrbitEngine.State.RUNNING, "orbit fourth miss retains final chance");
+        fail.tap();
+        check(fail.lives() == 0 && fail.state() == OrbitEngine.State.FINISHED, "orbit fifth miss ends game");
+        at = fail.elapsed(); fail.advance(100); fail.tap(); fail.resume();
+        check(fail.elapsed() == at && fail.lives() == 0 && fail.score() == 0, "orbit terminal state is immutable");
+        OrbitEngine idle = new OrbitEngine(1); idle.advance(Double.MAX_VALUE);
+        check(idle.state() == OrbitEngine.State.FINISHED && idle.lives() == 0 && idle.score() == 0 && idle.feedbackId() == 5, "orbit huge idle delta is bounded and awards no score");
+        OrbitEngine clock = new OrbitEngine(9); double speed = clock.speed(), width = clock.tolerance();
+        for (int i=0; i<1500; i++) hit(clock);
+        check(clock.elapsed() > 600 && clock.state() == OrbitEngine.State.RUNNING && clock.lives() == 5 && clock.score() > 100000, "orbit has no 60-second or ten-minute time limit");
+        check(clock.speed() > speed && clock.tolerance() < width && clock.level() > 100, "orbit accelerates while target window narrows");
+        check(clock.speed() < 360 && clock.tolerance() > 10, "orbit long play keeps a playable target and speed ceiling");
+        try {
+            java.lang.reflect.Field field = OrbitEngine.class.getDeclaredField("score"); field.setAccessible(true);
+            field.setInt(clock, OrbitEngine.MAX_SCORE - 1); hit(clock);
+            check(clock.score() == OrbitEngine.MAX_SCORE, "orbit score safely saturates at server ceiling");
+        } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
+        check(OrbitEngine.angularDistance(359, 1) == 2 && OrbitEngine.angularDistance(-1, 361) == 2, "orbit angle wrap handles target crossing");
+        OrbitEngine a = new OrbitEngine(123), b = new OrbitEngine(123), c = new OrbitEngine(123);
+        for (int i = 0; i < 180; i++) a.advance(1.0 / 60);
+        for (int i = 0; i < 360; i++) b.advance(1.0 / 120);
+        c.advance(3);
+        check(OrbitEngine.angularDistance(a.angle(), b.angle()) < .00001 && OrbitEngine.angularDistance(a.angle(), c.angle()) < .00001 && a.lives() == c.lives(), "orbit 60fps 120fps and large frame have identical motion and misses");
+        at = a.elapsed(); a.advance(Double.NaN); a.advance(Double.POSITIVE_INFINITY); a.advance(-1); a.advance(0);
+        check(a.elapsed() == at, "orbit invalid deltas ignored");
+        OrbitEngine seededA = new OrbitEngine(44), seededB = new OrbitEngine(44);
+        for (int i=0; i<100; i++) { hit(seededA); hit(seededB); }
+        check(seededA.target() == seededB.target() && seededA.score() == seededB.score(), "orbit seeded target sequence is reproducible");
+        for (int seed=0; seed<100; seed++) {
+            OrbitEngine sample = new OrbitEngine(seed);
+            for (int n=0; n<30; n++) hit(sample);
+            if (sample.jumps() != 30 || sample.lives() != 5) throw new AssertionError("Orbit wrap/target sequence " + seed);
+        }
+        check(true, "orbit many target wraps stay hittable without lost lives");
     }
     private static int matchingLane(ColorBreakEngine e) {
         for (int i = 0; i < 4; i++) if (e.laneColor(i) == e.targetColor()) return i;

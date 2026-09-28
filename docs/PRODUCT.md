@@ -2,28 +2,29 @@
 
 Source: user's 2026-09-24 six-concept image “초간단 아케이드 게임 아이디어 보드.png”, inspected directly. User asked for hourly app development in this exact repository.
 
-One Android app, six quick games. One or two fingers; approximately 60-second rounds except the endless five-miss Color Break mode; immediate retry. Native Java/Canvas/View implementation. No signup/login. Start without entering a nickname; optional nickname editing later. Local UUID identifies installation only, not authenticated server identity. No account recovery promise.
+One Android app, six quick games. One or two fingers; approximately 60-second rounds except endless five-miss Color Break and Orbit Snap; immediate retry. Native Java/Canvas/View implementation. No signup/login. Start without entering a nickname; optional nickname editing later. Local UUID identifies installation only, not authenticated server identity. No account recovery promise.
 
 | ID | 이름 | 원본 조작·핵심 | 점수 방향 |
 |---|---|---|---|
-| orbit_snap | 오비트 스냅 | 누르면 원을 돌고 떼면 다음 궤도로 점프 | 통과·정확도 |
+| orbit_snap | 오비트 스냅 | 자동 회전하는 점을 목표 구간에서 탭, 무제한·5회 미스 종료 | 타이밍·정확도 |
 | color_break | 컬러 브레이크 | 4색 버튼으로 랜덤 배치된 컬러 벽 통과, 무제한·5회 미스 종료 | 통과·연속 콤보 |
 | twin_tap | 트윈 탭 | 두 레인의 내려오는 점을 한/두 손가락으로 처리 | 타이밍·동시 성공 |
 | line_surf | 라인 서프 | 누르면 선 위를 달리고 떼면 점프, 틈과 장애물 통과 | 거리 |
 | pocket_pulse | 포켓 펄스 | 중심에서 퍼지는 파동과 목표 링 크기가 같을 때 탭 | 정확도·콤보 |
 | stack_slice | 스택 슬라이스 | 좌우 스와이프로 블록을 잘라 균형 유지, 과도한 기울기 종료 | 적층·균형 |
 
-Exact numbers below are initial playable tuning, not a claim that the user fixed every threshold. Keep initial rules version 1; if changing score semantics later use a new version.
+Exact numbers below are initial playable tuning, not a claim that the user fixed every threshold. Rule revisions are documented per game while the user's shared game IDs stay stable.
 
-## Orbit Snap v1
+## Orbit Snap v2 (v0.12.0)
 
-- READY waits for first touch. Game clock then runs even when finger is up; 60 seconds max.
-- Three lives. Release outside the mint arc costs one. A ring deadline of 4.5→3.3 seconds prevents idle camping.
-- Hold rotates dot; lift in target arc awards 100. Within 7° awards 150 total. No passive points.
-- Target tolerance shrinks 25°→14.2°; angular speed rises 130→232°/second.
-- Short .32s orbit transition. Extra input during transition cannot earn another jump.
-- Background/pause freezes time, cancels held input, requires explicit resume. Unfinished rounds abandoned to home do not save scores.
-- Completed rounds save best score locally. Scores do not upload retroactively by default.
+- Open directly into automatic clockwise rotation, with no start popup and no time limit. Hold and release no longer control movement. A fresh down in the ring/play area or lower TAP pad judges timing; the score area, moves, release and secondary pointers do not judge.
+- Five lives; the fifth miss ends play. Tapping outside the mint arc or passing its trailing edge loses exactly one life. No passive scoring. The leading edge is inclusive; a tap after the automatic trailing-edge miss cannot deduct another life during feedback.
+- A valid hit awards 100, or 150 within the central 28% of the half-window. Score saturates safely at 1,000,000,000 without ending play. Track successes, perfect hits, combo and best combo.
+- After each hit/miss, choose a new seeded target 100–240 degrees ahead, keeping the dot at its current angle. Rotation continues through the .16-second input lockout, so one touch cannot judge two targets.
+- After `n` judged targets, speed is `120 + 240*n/(n+60)` degrees/second; half-window is `10 + 20/(1+n/40)` degrees. Difficulty continues beyond one minute while approaching playable speed/window bounds. Each target keeps a fixed speed/window until resolved.
+- Background, rotation and explicit pause freeze motion and require the custom pastel sheet's resume action. Custom results offer retry, ranking and home. Completed results keep the existing exactly-once local storage and durable online event/score queues; abandoned runs do not save terminal records.
+- Pastel full-height board: top score, five hearts, level/speed, mint target, lilac dot/trail and combo. Compact/landscape windows fit a 360×500 minimum logical board.
+- Shared `orbit_snap / normal / points` and player identity are preserved. Migration `0004_orbit_snap_endless.sql` raises only this mode's server ceiling to 1,000,000,000, retaining existing rows/epochs. Apply before relying on online scores above 100,000; old records are not automatically reset.
 
 ## Color Break v2 (v0.11.0)
 
@@ -97,7 +98,7 @@ play-count analytics.
 
 ## Integration and lifecycle v1
 
-- Five game boards fit a 360×520 logical canvas. Color Break v2 fits a 360×480 minimum canvas that extends to full portrait height. Game touch coordinates remain owned by each View and never include the banner strip.
+- Four game boards fit a 360×520 logical canvas. Color Break v2 fits a 360×480 minimum and Orbit Snap v2 a 360×500 minimum, both extending to full portrait height. Game touch coordinates remain owned by each View and never include the banner strip.
 - Orientation/screen-size changes keep the current Activity and engine, cancel any held pointer, pause the round and require an explicit resume tap. The adaptive test banner is destroyed and loaded again for the new dimensions.
 - Process/Activity recreation does not pretend to restore an in-memory engine. An active run is deliberately abandoned without saving a partial score, the user is told why, and a same-game restart is offered. Home, rankings and settings destinations restore safely; a previously committed result opens local records.
 - Installation ID creation, terminal game results and record deletion are synchronously committed. Nickname and vibration preferences remain non-critical asynchronous settings writes.

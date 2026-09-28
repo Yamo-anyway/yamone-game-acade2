@@ -14,8 +14,10 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import com.yamone.arcade2.core.GameId;
 import com.yamone.arcade2.core.ColorBreakEngine;
+import com.yamone.arcade2.core.OrbitEngine;
 import com.yamone.arcade2.data.LocalStore;
 import com.yamone.arcade2.ui.ColorBreakView;
+import com.yamone.arcade2.ui.OrbitView;
 import com.yamone.arcade2.data.RankingGateway;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -57,7 +59,8 @@ public final class UiSmokeInstrumentation extends Instrumentation {
             runOnMainSync(() -> scroll(activity.getWindow().getDecorView()).fullScroll(View.FOCUS_DOWN)); capture("rankings-list-fixture");
             navigate("홈"); requireText("오늘도, 가볍게 한 판 ✦");
             colorBreak();
-            result.putString("stream", "UI_SMOKE_OK: " + scenario + " " + widthDp + "dp, font " + fontScale + " menus and four-lane endless play/pause/result/retry/input/records\n");
+            orbit();
+            result.putString("stream", "UI_SMOKE_OK: " + scenario + " " + widthDp + "dp, font " + fontScale + " menus, Color Break and automatic Orbit play/pause/result/retry/input/records\n");
             finish(Activity.RESULT_OK, result);
         } catch (Throwable error) {
             result.putString("stream", "UI_SMOKE_FAILED: " + android.util.Log.getStackTraceString(error));
@@ -110,6 +113,64 @@ public final class UiSmokeInstrumentation extends Instrumentation {
             throw new AssertionError("Retry must create a clean five-life game");
         navigate("일시정지"); navigate("홈으로");
         if (local.plays(GameId.COLOR_BREAK) != previousPlays + 1) throw new AssertionError("Abandoned retry saved a fake result");
+    }
+    private void orbit() throws Exception {
+        LocalStore local = new LocalStore(getTargetContext());
+        int previousPlays = local.plays(GameId.ORBIT_SNAP);
+        String playerId = local.playerId();
+        navigate("지금 플레이  →");
+        OrbitView board = activity.getWindow().getDecorView().findViewWithTag("orbitBoard");
+        if (board == null || board.engine().state() != OrbitEngine.State.RUNNING)
+            throw new AssertionError("Orbit should rotate immediately without an entry dialog");
+        OrbitEngine engine = board.engine();
+        double angle = engine.angle();
+        capture("orbit-playing");
+        if (engine.angle() == angle) throw new AssertionError("Orbit did not rotate without holding");
+        navigate("일시정지"); requireText("빙글빙글, 궤도도 잠시 쉬어요.\n준비되면 타이밍을 이어가요!");
+        double pausedAt = engine.elapsed(); angle = engine.angle();
+        capture("orbit-pause");
+        if (engine.elapsed() != pausedAt || engine.angle() != angle) throw new AssertionError("Orbit pause did not freeze rotation");
+        runOnMainSync(() -> tap(board, board.getWidth()/2f, board.getHeight()-100));
+        if (engine.lives() != 5) throw new AssertionError("Paused board accepted input");
+        navigate("계속 플레이");
+        runOnMainSync(() -> {
+            tap(board, board.getWidth()/2f, 20);
+            if (engine.lives() != 5 || engine.score() != 0) throw new AssertionError("Score area incorrectly judges a tap");
+            for (int i=0; i<20; i++) {
+                engine.advance(((engine.target()-engine.angle()+360)%360) / engine.speed());
+                float scale = Math.min(board.getWidth()/360f, board.getHeight()/500f);
+                tap(board, board.getWidth()/2f, board.getHeight()-42*scale);
+            }
+            if (engine.jumps() != 20 || engine.lives() != 5 || engine.score() <= 0)
+                throw new AssertionError("Orbit actual pad input did not award twenty target hits");
+            long now = SystemClock.uptimeMillis();
+            MotionEvent move = MotionEvent.obtain(now, now, MotionEvent.ACTION_MOVE, board.getWidth()/2f, board.getHeight()-100, 0);
+            MotionEvent release = MotionEvent.obtain(now, now+1, MotionEvent.ACTION_UP, board.getWidth()/2f, board.getHeight()-100, 0);
+            try { board.dispatchTouchEvent(move); board.dispatchTouchEvent(release); }
+            finally { move.recycle(); release.recycle(); }
+            if (engine.jumps() != 20 || engine.lives() != 5) throw new AssertionError("Move/release incorrectly judged a target");
+            board.invalidate();
+        });
+        capture("orbit-combo");
+        runOnMainSync(() -> { callActivityOnPause(activity); callActivityOnResume(activity); });
+        waitForIdleSync();
+        if (!board.isPaused() || activity.getWindow().getDecorView().findViewWithTag("orbitPause") == null)
+            throw new AssertionError("Orbit foreground recovery requires explicit resume");
+        navigate("계속 플레이");
+        runOnMainSync(() -> { engine.advance(1000); board.invalidate(); });
+        waitForIdleSync(); Thread.sleep(250); waitForIdleSync();
+        requireText("다섯 번의 미스, 여기까지 잘 달렸어요."); capture("orbit-result");
+        if (activity.getWindow().getDecorView().findViewWithTag("orbitResult") == null)
+            throw new AssertionError("Orbit custom result sheet missing");
+        if (local.plays(GameId.ORBIT_SNAP) != previousPlays+1 || local.best(GameId.ORBIT_SNAP) < engine.score())
+            throw new AssertionError("Orbit terminal record must save exactly once");
+        if (!local.playerId().equals(playerId)) throw new AssertionError("Orbit changed installation identity");
+        navigate("한 판 더  →");
+        OrbitView fresh = activity.getWindow().getDecorView().findViewWithTag("orbitBoard");
+        if (fresh.engine().state() != OrbitEngine.State.RUNNING || fresh.engine().lives() != 5 || fresh.engine().score() != 0)
+            throw new AssertionError("Orbit retry must reset score/lives and rotate immediately");
+        navigate("일시정지"); navigate("홈으로");
+        if (local.plays(GameId.ORBIT_SNAP) != previousPlays+1) throw new AssertionError("Orbit abandoned retry saved a false result");
     }
     private void pad(ColorBreakView board, int lane) {
         float scale = Math.min(board.getWidth()/360f, board.getHeight()/480f);

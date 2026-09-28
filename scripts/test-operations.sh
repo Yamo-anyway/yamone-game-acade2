@@ -41,6 +41,14 @@ assert db.execute("SELECT max_score, ranking_epoch FROM game_catalog WHERE game_
 assert db.execute("SELECT max_score FROM game_catalog WHERE game_id='orbit_snap' AND mode_id='normal'").fetchone()[0] == 100000
 assert db.execute("SELECT best_score FROM leaderboard WHERE player_id='existing'").fetchone()[0] == 700
 print("PASS endless Color Break raises only its score ceiling, preserving records and epochs")
+db.execute("INSERT INTO leaderboard VALUES ('orbit-existing', 'orbit_snap', 'normal', 'test', 'KR', 850, '1', '1')")
+orbit = Path("cloudflare/migrations/0004_orbit_snap_endless.sql").read_text()
+db.executescript(orbit)
+db.executescript(orbit)
+assert db.execute("SELECT max_score, ranking_epoch, local_reset_epoch FROM game_catalog WHERE game_id='orbit_snap' AND mode_id='normal'").fetchone() == (1000000000, 2, 1)
+assert db.execute("SELECT best_score FROM leaderboard WHERE player_id='orbit-existing'").fetchone()[0] == 850
+assert db.execute("SELECT max_score FROM game_catalog WHERE game_id='twin_tap' AND mode_id='normal'").fetchone()[0] == 100000
+print("PASS endless Orbit Snap raises only its score ceiling, preserving records and reset epochs")
 PY
 
 node --input-type=module <<'JS'

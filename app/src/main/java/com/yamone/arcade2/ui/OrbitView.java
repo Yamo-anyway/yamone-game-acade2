@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.os.SystemClock;
@@ -11,93 +12,105 @@ import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import com.yamone.arcade2.core.OrbitEngine;
 import java.util.Locale;
-import java.util.Random;
 
 public final class OrbitView extends GameView {
     public interface Listener { void finished(OrbitEngine engine); }
+    private static final int BG = 0xFFFAF8FF, TEXT = 0xFF302A43, PURPLE = 0xFF7754AD, MUTED = 0xFF6D627D;
     private final OrbitEngine engine;
     private final Listener listener;
     private final boolean haptics;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final float[] stars = new float[100];
     private long lastFrame;
     private boolean foreground = true, delivered;
-    private int pointer = -1, lastFeedback;
-    private static final int INK = 0xFF090E22, CYAN = 0xFF67D9FF, MINT = 0xFF67E7DB, MUTED = 0xFF97A2C8;
+    private int lastFeedback;
+    private float scale, offsetX, height;
 
     public OrbitView(Context context, OrbitEngine engine, boolean haptics, Listener listener) {
         super(context); this.engine = engine; this.haptics = haptics; this.listener = listener;
-        setFocusable(true); setClickable(true);
-        setContentDescription("오비트 스냅. 화면을 누르면 점이 돌고, 민트 구간에서 손을 떼면 점프합니다.");
-        Random random = new Random(42);
-        for (int i = 0; i < stars.length; i++) stars[i] = random.nextFloat();
+        setFocusable(true); setClickable(true); setTag("orbitBoard");
+        setContentDescription("오비트 스냅. 점은 자동으로 회전해요. 민트 구간과 겹칠 때 원이나 아래 버튼을 탭하세요. 다섯 번 미스하면 종료됩니다.");
     }
     public OrbitEngine engine() { return engine; }
-    public void pauseGame() { engine.pause(); pointer = -1; lastFrame = 0; invalidate(); }
+    public boolean isPaused() { return engine.state() == OrbitEngine.State.PAUSED; }
+    public void pauseGame() { engine.pause(); lastFrame = 0; invalidate(); }
     public void resumeGame() { engine.resume(); lastFrame = 0; invalidate(); }
     public void setForeground(boolean value) {
         foreground = value;
-        if (!value) pauseGame();
-        else { lastFrame = 0; invalidate(); }
+        if (!value) pauseGame(); else { lastFrame = 0; invalidate(); }
     }
-    @Override protected void onDraw(Canvas canvas) {
-        super.onDraw(canvas);
+    private void geometry() {
+        scale = Math.min(getWidth() / 360f, getHeight() / 500f);
+        if (scale <= 0) return;
+        offsetX = (getWidth() - 360 * scale) / 2; height = getHeight() / scale;
+    }
+    private void syncTime() {
         long now = SystemClock.elapsedRealtimeNanos();
         if (foreground && lastFrame != 0) engine.advance((now - lastFrame) / 1_000_000_000.0);
         lastFrame = now;
-        float scale = Math.min(getWidth() / 360f, getHeight() / 520f);
+    }
+    @Override protected void onDraw(Canvas c) {
+        super.onDraw(c); syncTime(); geometry(); c.drawColor(BG);
         if (scale <= 0) return;
-        canvas.drawColor(INK);
-        float offsetX = (getWidth() - 360 * scale) / 2, offsetY = (getHeight() - 520 * scale) / 2;
-        canvas.save(); canvas.translate(offsetX, offsetY); canvas.scale(scale, scale);
-        float height = 520;
-        for (int i = 0; i < stars.length; i += 2) {
-            fill(0xFF334468); canvas.drawCircle(stars[i] * 360, stars[i + 1] * height, i % 3 == 0 ? 1.3f : .7f, paint);
+        c.save(); c.translate(offsetX, 0); c.scale(scale, scale);
+        label(c, "SCORE", 22, 18, 9, MUTED, false);
+        label(c, String.format(Locale.getDefault(), "%,d", engine.score()), 20, 55, engine.score() >= 10000000 ? 25 : 34, TEXT, false);
+        label(c, "남은 기회", 254, 17, 9, MUTED, false);
+        for (int i = 0; i < 5; i++) heart(c, 258 + i * 17, 38, i < engine.lives() ? 0xFFE67CA6 : 0xFFE8E1EF);
+        round(c, 20, 69, 340, 99, 15, Color.WHITE);
+        label(c, "LEVEL " + engine.level(), 32, 89, 11, PURPLE, false);
+        label(c, "무제한", 180, 89, 11, MUTED, true);
+        label(c, String.format(Locale.US, "×%.2f", engine.speed()/120), 310, 89, 11, PURPLE, true);
+        label(c, "민트 구간에 들어오면, 톡!", 180, 126, 12, 0xFF286F60, true);
+
+        float cx = 180, cy = height/2 + 7, radius = 108;
+        fill(0xFFEFF7FA); c.drawCircle(cx, cy, radius + 32, paint);
+        fill(0xFFF5F0FC); c.drawCircle(cx, cy, radius - 22, paint);
+        stroke(0xFFE0D7EF, 1); c.drawCircle(cx, cy, radius + 22, paint);
+        for (int i = 0; i < 24; i++) {
+            double a = Math.toRadians(i * 15);
+            fill(0xFFCFC2E2); c.drawCircle(cx+(radius+22)*(float)Math.cos(a), cy+(radius+22)*(float)Math.sin(a), i%3==0 ? 1.5f : .8f, paint);
         }
-        label(canvas, "SCORE", 24, 29, 10, MUTED, false);
-        label(canvas, Integer.toString(engine.score()), 24, 63, 30, Color.WHITE, false);
-        label(canvas, String.format(Locale.ROOT, "%02d", (int)Math.ceil(engine.remaining())), 320, 52, 28, Color.WHITE, true);
-        label(canvas, "SECONDS", 320, 69, 8, MUTED, true);
-        for (int i = 0; i < 3; i++) { fill(i < engine.lives() ? 0xFFFF84AF : 0xFF2D304F); canvas.drawCircle(28 + i * 16, 84, 4, paint); }
-
-        float cx = 180, cy = Math.max(160, height * .48f), radius = Math.min(115, Math.max(60, height * .24f));
-        float progress = (float)engine.jumpProgress();
-        float stretch = progress < 0 ? 0 : 18 * (float)Math.sin(progress * Math.PI);
-        stroke(0xFF182748, 1); canvas.drawCircle(cx, cy, radius + 40, paint);
-        stroke(0xFF213B5B, 1); canvas.drawCircle(cx, cy, radius - 30, paint);
-        stroke(0xFF304768, 3); canvas.drawCircle(cx, cy, radius + stretch, paint);
-        RectF ring = new RectF(cx - radius - stretch, cy - radius - stretch, cx + radius + stretch, cy + radius + stretch);
-        stroke(0x334EE6D3, 18); canvas.drawArc(ring, (float)(engine.target() - engine.tolerance()), (float)(engine.tolerance() * 2), false, paint);
-        stroke(MINT, 6); canvas.drawArc(ring, (float)(engine.target() - engine.tolerance()), (float)(engine.tolerance() * 2), false, paint);
-        float tx = cx + (radius + stretch) * (float)Math.cos(Math.toRadians(engine.target()));
-        float ty = cy + (radius + stretch) * (float)Math.sin(Math.toRadians(engine.target()));
-        fill(Color.WHITE); canvas.drawCircle(tx, ty, 3, paint);
-        float x = cx + (radius + stretch) * (float)Math.cos(Math.toRadians(engine.angle()));
-        float y = cy + (radius + stretch) * (float)Math.sin(Math.toRadians(engine.angle()));
-        fill(0x2267D9FF); canvas.drawCircle(x, y, 23, paint);
-        fill(0x5567D9FF); canvas.drawCircle(x, y, 15, paint);
-        fill(Color.WHITE); canvas.drawCircle(x, y, 8, paint);
-        label(canvas, "ORBIT", cx, cy - 11, 10, MUTED, true);
-        label(canvas, String.format(Locale.ROOT, "%02d", engine.jumps() + 1), cx, cy + 22, 36, Color.WHITE, true);
-        float gaugeY = cy + radius + 30;
-        stroke(0xFF20304A, 4); canvas.drawLine(125, gaugeY, 235, gaugeY, paint);
-        stroke(engine.ringFraction() < .3 ? 0xFFFF84AF : CYAN, 4);
-        canvas.drawLine(125, gaugeY, 125 + 110 * (float)engine.ringFraction(), gaugeY, paint);
-        String feedback = switch (engine.feedback()) {
-            case PERFECT -> "PERFECT! +150";
-            case HIT -> "NICE! +100";
-            case MISS -> "괜찮아요, 다음 타이밍!";
-            default -> "민트 구간에서 손을 떼세요";
-        };
-        label(canvas, feedback, cx, Math.max(gaugeY + 30, height - 89), 15,
-            engine.feedback() == OrbitEngine.Feedback.MISS ? 0xFFFF84AF : MINT, true);
-        fill(engine.held() ? 0xFF193B4A : 0xFF152139);
-        canvas.drawRoundRect(35, height - 63, 325, height - 13, 25, 25, paint);
-        label(canvas, engine.held() ? "타이밍에 맞춰 손 떼기" : "화면 어디든 길게 누르기", cx, height - 33, 14, Color.WHITE, true);
-
-        if (engine.state() == OrbitEngine.State.READY) overlay(canvas, height, "준비됐나요?", "꾹 누르고 돌다가 · 민트에서 떼세요");
-        if (engine.state() == OrbitEngine.State.PAUSED) overlay(canvas, height, "잠시 쉬는 중", "화면을 탭하면 이어서 플레이");
-        canvas.restore();
+        stroke(0xFFD9CDEF, 7); c.drawCircle(cx, cy, radius, paint);
+        RectF ring = new RectF(cx-radius, cy-radius, cx+radius, cy+radius);
+        float start = (float)(engine.target()-engine.tolerance()), sweep = (float)(2*engine.tolerance());
+        stroke(0xFFCDF0E4, 22); paint.setStrokeCap(Paint.Cap.BUTT); c.drawArc(ring, start, sweep, false, paint);
+        stroke(0xFF459D85, 8); paint.setStrokeCap(Paint.Cap.BUTT); c.drawArc(ring, start, sweep, false, paint);
+        stroke(0xFF236F5A, 3); paint.setStrokeCap(Paint.Cap.BUTT);
+        c.drawArc(ring, (float)(engine.target()-engine.perfectTolerance()), (float)(engine.perfectTolerance()*2), false, paint);
+        float tx=cx+radius*(float)Math.cos(Math.toRadians(engine.target()));
+        float ty=cy+radius*(float)Math.sin(Math.toRadians(engine.target()));
+        star(c, tx, ty, 5, Color.WHITE);
+        // Small fading beads show the direction without obscuring the target window.
+        for (int i = 5; i > 0; i--) {
+            double a = Math.toRadians(engine.angle()-i*5);
+            fill((0x20 + (5-i)*0x14) << 24 | 0xA88BD9);
+            c.drawCircle(cx+radius*(float)Math.cos(a), cy+radius*(float)Math.sin(a), 2+(5-i)*.6f, paint);
+        }
+        float x=cx+radius*(float)Math.cos(Math.toRadians(engine.angle()));
+        float y=cy+radius*(float)Math.sin(Math.toRadians(engine.angle()));
+        fill(engine.inTarget() ? 0x5576D1BA : 0x33BCA6ED); c.drawCircle(x, y, 23, paint);
+        fill(Color.WHITE); c.drawCircle(x, y, 15, paint);
+        fill(PURPLE); c.drawCircle(x, y, 11, paint);
+        fill(0xFFEBDCFB); c.drawCircle(x-3, y-3, 3, paint);
+        star(c, cx-31, cy-49, 6, 0xFFC8AFE4); star(c, cx+31, cy+49, 4, 0xFFF0B7D1);
+        label(c, "COMBO", cx, cy-18, 10, MUTED, true);
+        label(c, Integer.toString(engine.combo()), cx, cy+22, 38, PURPLE, true);
+        label(c, "PERFECT  " + engine.perfects(), cx, cy+42, 9, MUTED, true);
+        String feedback = "자동 회전 · 목표 구간에서 한 번 탭";
+        int feedbackColor = MUTED;
+        if (engine.feedbackRemaining() > 0) {
+            feedback = switch (engine.feedback()) {
+                case PERFECT -> "✦ PERFECT! +150";
+                case HIT -> "NICE! +100";
+                case MISS -> "괜찮아요, 다음 타이밍!";
+                default -> feedback;
+            };
+            feedbackColor = engine.feedback() == OrbitEngine.Feedback.MISS ? 0xFFAC416D : 0xFF286F60;
+        }
+        label(c, feedback, 180, height-92, 12, feedbackColor, true);
+        round(c, 28, height-72, 332, height-17, 25, engine.inTarget() ? 0xFFD8F3E9 : 0xFFF0E9FC);
+        label(c, engine.inTarget() ? "지금, 톡!  ✦" : "TAP  ·  타이밍을 맞춰요", 180, height-38, 15, engine.inTarget() ? 0xFF236F5A : PURPLE, true);
+        c.restore();
         if (engine.feedbackId() != lastFeedback) {
             lastFeedback = engine.feedbackId();
             if (haptics) performHapticFeedback(engine.feedback() == OrbitEngine.Feedback.MISS ? HapticFeedbackConstants.LONG_PRESS : HapticFeedbackConstants.CLOCK_TICK);
@@ -106,41 +119,31 @@ public final class OrbitView extends GameView {
             delivered = true; post(() -> listener.finished(engine));
         } else if (foreground && engine.state() == OrbitEngine.State.RUNNING) postInvalidateOnAnimation();
     }
-    private void overlay(Canvas canvas, float height, String title, String hint) {
-        fill(0xCF090E22); canvas.drawRect(0, 0, 360, height, paint);
-        label(canvas, title, 180, height * .44f, 25, Color.WHITE, true);
-        label(canvas, hint, 180, height * .44f + 37, 12, CYAN, true);
+    private void heart(Canvas c, float x, float y, int color) {
+        fill(color); Path p=new Path(); p.moveTo(x,y+7); p.cubicTo(x-15,y-3,x-4,y-12,x,y-5);
+        p.cubicTo(x+4,y-12,x+15,y-3,x,y+7); c.drawPath(p,paint);
     }
+    private void star(Canvas c, float x, float y, float r, int color) {
+        fill(color); Path p=new Path(); p.moveTo(x,y-r); p.quadTo(x+r*.2f,y-r*.2f,x+r,y);
+        p.quadTo(x+r*.2f,y+r*.2f,x,y+r); p.quadTo(x-r*.2f,y+r*.2f,x-r,y); p.quadTo(x-r*.2f,y-r*.2f,x,y-r); c.drawPath(p,paint);
+    }
+    private void round(Canvas c,float l,float t,float r,float b,float radius,int color) { fill(color); c.drawRoundRect(l,t,r,b,radius,radius,paint); }
     private void fill(int color) { paint.setColor(color); paint.setStyle(Paint.Style.FILL); }
-    private void stroke(int color, float width) { paint.setColor(color); paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(width); paint.setStrokeCap(Paint.Cap.ROUND); }
-    private void label(Canvas c, String text, float x, float y, float size, int color, boolean centered) {
-        fill(color); paint.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
-        paint.setTextSize(size); paint.setTextAlign(centered ? Paint.Align.CENTER : Paint.Align.LEFT);
-        c.drawText(text, x, y, paint);
+    private void stroke(int color,float width) { paint.setColor(color); paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(width); paint.setStrokeCap(Paint.Cap.ROUND); }
+    private void label(Canvas c,String value,float x,float y,float size,int color,boolean centered) {
+        fill(color); paint.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL)); paint.setTextSize(size);
+        paint.setTextAlign(centered ? Paint.Align.CENTER : Paint.Align.LEFT); c.drawText(value,x,y,paint);
     }
     @Override public boolean onTouchEvent(MotionEvent event) {
-        switch (event.getActionMasked()) {
-            case MotionEvent.ACTION_DOWN:
-                getParent().requestDisallowInterceptTouchEvent(true);
-                if (engine.state() == OrbitEngine.State.PAUSED) { resumeGame(); return true; }
-                syncTime(); pointer = event.getPointerId(0); engine.press(); invalidate(); return true;
-            case MotionEvent.ACTION_UP:
-                if (pointer == event.getPointerId(event.getActionIndex())) {
-                    syncTime(); engine.release(); pointer = -1; performClick(); invalidate();
-                }
-                return true;
-            case MotionEvent.ACTION_POINTER_UP:
-                if (pointer == event.getPointerId(event.getActionIndex())) { engine.cancelInput(); pointer = -1; }
-                return true;
-            case MotionEvent.ACTION_CANCEL:
-                engine.cancelInput(); pointer = -1; invalidate(); return true;
-            default: return true;
-        }
-    }
-    private void syncTime() {
-        long now = SystemClock.elapsedRealtimeNanos();
-        if (foreground && lastFrame != 0) engine.advance((now - lastFrame) / 1_000_000_000.0);
-        lastFrame = now;
+        if (!foreground || engine.state() != OrbitEngine.State.RUNNING) return true;
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            getParent().requestDisallowInterceptTouchEvent(true); geometry();
+            if (scale <= 0) return true;
+            float x=(event.getX()-offsetX)/scale, y=event.getY()/scale;
+            if (x >= 20 && x <= 340 && y >= 138 && y <= height-12) { syncTime(); engine.tap(); invalidate(); }
+        } else if (event.getActionMasked() == MotionEvent.ACTION_UP) performClick();
+        // MOVE, CANCEL, UP and secondary pointers never judge or freeze the rotating dot.
+        return true;
     }
     @Override public boolean performClick() { super.performClick(); return true; }
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.0 — 2026-09-28
+
+- Rebuild Orbit Snap as continuous automatic rotation with target-tap timing, no time limit and five misses. Missing a target also costs a life.
+- Gradually increase angular speed and narrow the target, retain smooth motion between targets and award 100/150 points for HIT/PERFECT.
+- Add a pastel full-height ring board with top score/hearts, trails, combo and a timing pad; enter immediately and use custom pause/result sheets.
+- Preserve installation identity, stable game/mode IDs and existing ranking/play-event integration. Add a non-destructive D1 migration for long-run scores.
+- Pass 137 core checks and 29 integration checks; extend native emulator coverage to automatic motion, target taps, pause/foreground recovery, result storage and retry.
+
 ## 0.11.0 — 2026-09-28
 
 - Rebuild Color Break with four randomly shuffled color/shape lanes, colored tap pads, five misses and endless survival instead of a 60-second timer.

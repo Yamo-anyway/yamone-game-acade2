@@ -1,7 +1,7 @@
 package com.yamone.arcade2.core;
 
 public enum GameId {
-    ORBIT_SNAP("orbit_snap", "오비트 스냅", "궤도를 돌다가, 딱 맞춰 점프", "길게 누르기 · 손 떼기", 0xFF67D9FF, true),
+    ORBIT_SNAP("orbit_snap", "오비트 스냅", "빙글빙글, 반짝이는 순간에 톡", "자동 회전 · 타이밍 탭 · 무제한", 0xFF67D9FF, true),
     COLOR_BREAK("color_break", "컬러 브레이크", "네 가지 색, 끝없이 이어지는 리듬", "4색 탭 · 무제한", 0xFFFF84AF, true),
     TWIN_TAP("twin_tap", "트윈 탭", "두 개의 리듬을 동시에", "한 손가락 · 두 손가락", 0xFF73E7B1, true),
     LINE_SURF("line_surf", "라인 서프", "선을 타고, 틈을 넘어", "길게 누르기 · 손 떼기", 0xFFFFB96B, true),

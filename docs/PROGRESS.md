@@ -1,6 +1,6 @@
 # Development progress
 
-Current stage: **M11 / v0.11.0**. Repository is the source of truth for subsequent work.
+Current stage: **M12 / v0.12.0**. Repository is the source of truth for subsequent work.
 
 | Milestone | Scope | State |
 |---|---|---|
@@ -15,6 +15,32 @@ Current stage: **M11 / v0.11.0**. Repository is the source of truth for subseque
 | M09 | Play analytics, remote catalog, ranking reset and admin dashboard | complete; production migration/deployment, live smoke test and Android CI passed |
 | M10 | Pastel home, rankings and settings redesign | complete; Android lint/APK, native emulator UI and visual review passed |
 | M11 | Four-lane endless pastel Color Break | complete; Android lint/APK and native play-screen QA passed; D1 ceiling migration pending |
+| M12 | Automatic rotating endless pastel Orbit Snap | implementation and local checks complete; exact-commit Android CI pending |
+
+## M12 implementation
+
+2026-09-28: Replaced Orbit hold/release and 60-second play with automatic
+continuous rotation, target taps, five misses, progressive speed and narrower
+targets. Passing a target costs one life; HIT/PERFECT award 100/150. The dot
+continues through a short input lockout and a new target appears ahead without
+teleporting the dot. Pastel ring/trail, top score/hearts, combo and timing pad
+use the full board. Entry is immediate; pause/background recovery and results
+share the custom pastel sheets with Color Break. Other four rule sets stay intact.
+
+Local validation: 137 engine checks, 29 integration checks and operations tests
+pass. Orbit coverage includes successful play beyond ten minutes/100,000 points,
+window edges, automatic misses, five-life termination, paused feedback, frame
+rate consistency, huge deltas, target wraps and bounded integer scores.
+Native smoke coverage adds actual timing-pad input, automatic motion, explicit
+foreground resume, exactly-once score/play storage and clean retry at both sizes.
+Android lint/build, emulator screenshots and visual review are pending CI.
+
+Added `0004_orbit_snap_endless.sql` to increase only Orbit's max score to
+1,000,000,000 without deleting rows or changing reset epochs. Production D1
+application is pending owner execution because this workspace has no Cloudflare
+deployment connection. Pending Color Break migration can be applied by the same
+command. Existing scores and installation identities are kept; no test data is
+sent to production by the offline UI runner.
 
 ## M11 implementation
 

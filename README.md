@@ -1,14 +1,14 @@
 # 야모네 아케이드 2
 
-6가지 1분 아케이드 게임을 모은 **Android 네이티브 앱**입니다. 웹사이트나 WebView 게임이 아닙니다.
+6가지 짧은 아케이드 게임을 모은 **Android 네이티브 앱**입니다. 오비트 스냅과 컬러 브레이크는 시간 제한 없이 플레이합니다.
 
-현재 버전: **0.8.0 — Cloudflare 온라인 랭킹 연결**
+현재 버전: **0.12.0 — 자동 회전·무제한 오비트 스냅**
 
 ## 현재 구현
 
 - 홈 / 플레이 / 결과 / 로컬 최고기록 / 설정
-- 오비트 스냅: 누르기·떼기 입력, 궤도 타이밍, 60초 제한, 3회 실수 종료, 점수와 PERFECT, 일시정지
-- 컬러 브레이크: 좌우 탭, 상승하는 색 벽 통과, 색+숫자 구분, 연속 콤보, 60초 제한, 3회 실수 종료, 개별 최고기록
+- 오비트 스냅: 자동 회전, 목표 구간에서 탭, 속도 증가·구간 축소, 무제한·5회 미스 종료, 파스텔 보드와 전용 일시정지·결과 화면
+- 컬러 브레이크: 랜덤 4색 레인과 색 버튼, 상승하는 벽 통과, 연속 콤보, 가속·무제한·5회 미스 종료, 파스텔 보드
 - 트윈 탭: 두 레인의 하강 노트, 단일·동시 노트, 포인터별 멀티터치, 타이밍 판정, 콤보, 60초 제한, 5회 실수 종료
 - 라인 서프: 누르는 동안 선 위 주행, 손을 떼어 점프, 틈·장애물·충돌 회복, 거리와 연속 통과 점수, 60초 제한
 - 포켓 펄스: 확장 파동과 목표 링 맞추기, PERFECT·GREAT·GOOD 정확도, 자동 MISS, 콤보, 60초 제한
@@ -21,6 +21,7 @@
 - 기존 Yamone Games Cloudflare Worker/D1에 게임별 최고기록 전송
 - 게임별 온라인 TOP 100, 내 순위, 내 주변 순위와 국가 표시
 - 오프라인 최고기록·삭제 요청의 로컬 보관 및 재연결 처리
+- 파스텔 홈·랭킹·설정, 웹 관리자 통계·게임 배치·게임별 랭킹 및 앱 기록 초기화 동기화
 - GitHub Actions 엔진 검사 / lint / debug APK 빌드
 
 6개 게임이 모두 플레이 가능하며 통합·수명주기·화면비·오프라인 기록·배너 정책 검사를 CI에 포함합니다.
@@ -40,7 +41,9 @@ GitHub의 **Actions → Android → 성공한 실행 → yamone-arcade2-debug**�
 
 ## 이어서 개발
 
-`docs/PRODUCT.md`, `docs/PROGRESS.md`, `docs/API_CONTRACT.md`를 먼저 읽습니다. 원본 시안의 이름·조작을 유지합니다. 외부 서버는 사용자가 추후 제공합니다.
+`docs/PRODUCT.md`, `docs/PROGRESS.md`, `docs/API_CONTRACT.md`를 먼저 읽습니다. 게임별 최신 승인 규칙과 공유 game ID를 유지합니다. 랭킹 서버는 기존 Cloudflare Worker/D1을 사용합니다.
+
+무제한 게임의 100,000점 초과 기록 업로드에는 `cloudflare/`에서 최신 D1 마이그레이션 적용이 필요합니다. 자세한 명령은 `cloudflare/README.md`에 있습니다.
 
 기술 확인 자료: [AGP 8.10 호환성](https://developer.android.com/build/releases/agp-8-10-0-release-notes), [AdMob Android SDK](https://developers.google.com/admob/android/quick-start), [테스트 광고 ID](https://developers.google.com/admob/android/test-ads), [적응형 배너](https://developers.google.com/admob/android/banner).
 

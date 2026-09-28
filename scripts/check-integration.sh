@@ -53,11 +53,13 @@ check_fixed cloudflare/src/index.js \
 check_fixed cloudflare/src/admin-page.js \
   '국가별 통계' 'admin country statistics UI exists'
 
-views=(OrbitView TwinTapView LineSurfView PocketPulseView StackSliceView)
+views=(TwinTapView LineSurfView PocketPulseView StackSliceView)
 for view in "${views[@]}"; do
   check_fixed "app/src/main/java/com/yamone/arcade2/ui/${view}.java" \
     'Math.min(getWidth() / 360f, getHeight() / 520f)' "${view} fits both width and height"
 done
+check_fixed app/src/main/java/com/yamone/arcade2/ui/OrbitView.java \
+  'Math.min(getWidth() / 360f, getHeight() / 500f)' 'OrbitView fits compact screens and extends to full portrait height'
 check_fixed app/src/main/java/com/yamone/arcade2/ui/ColorBreakView.java \
   'Math.min(getWidth() / 360f, getHeight() / 480f)' 'ColorBreakView fits compact screens and extends to full portrait height'
 
