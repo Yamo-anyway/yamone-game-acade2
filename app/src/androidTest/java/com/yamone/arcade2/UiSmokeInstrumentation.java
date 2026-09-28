@@ -15,9 +15,11 @@ import android.widget.TextView;
 import com.yamone.arcade2.core.GameId;
 import com.yamone.arcade2.core.ColorBreakEngine;
 import com.yamone.arcade2.core.OrbitEngine;
+import com.yamone.arcade2.core.TwinTapEngine;
 import com.yamone.arcade2.data.LocalStore;
 import com.yamone.arcade2.ui.ColorBreakView;
 import com.yamone.arcade2.ui.OrbitView;
+import com.yamone.arcade2.ui.TwinTapView;
 import com.yamone.arcade2.data.RankingGateway;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -60,7 +62,8 @@ public final class UiSmokeInstrumentation extends Instrumentation {
             navigate("홈"); requireText("오늘도, 가볍게 한 판 ✦");
             colorBreak();
             orbit();
-            result.putString("stream", "UI_SMOKE_OK: " + scenario + " " + widthDp + "dp, font " + fontScale + " menus, Color Break and automatic Orbit play/pause/result/retry/input/records\n");
+            tapTap();
+            result.putString("stream", "UI_SMOKE_OK: " + scenario + " " + widthDp + "dp, font " + fontScale + " menus, Color Break, Orbit and four-lane Tap Tap input/multitouch/pause/results/records\n");
             finish(Activity.RESULT_OK, result);
         } catch (Throwable error) {
             result.putString("stream", "UI_SMOKE_FAILED: " + android.util.Log.getStackTraceString(error));
@@ -181,6 +184,85 @@ public final class UiSmokeInstrumentation extends Instrumentation {
         Throwable[] failure = new Throwable[1];
         runOnMainSync(() -> { try { task.run(); } catch (Throwable error) { failure[0] = error; } });
         if (failure[0] != null) throw new AssertionError("Main-thread UI assertion", failure[0]);
+    }
+    private void tapTap() throws Exception {
+        LocalStore local=new LocalStore(getTargetContext());
+        int previousPlays=local.plays(GameId.TWIN_TAP); String playerId=local.playerId();
+        navigate("탭탭");
+        TwinTapView board=activity.getWindow().getDecorView().findViewWithTag("tapTapBoard");
+        if (board==null || board.engine().state()!=TwinTapEngine.State.READY) throw new AssertionError("Tap Tap should enter without a dialog");
+        TwinTapEngine engine=board.engine(); capture("tap-tap-ready");
+        onMain(()-> {
+            tap(board,board.getWidth()/2f,20);
+            tap(board,board.getWidth()/2f,board.getHeight()/2f);
+            if (engine.state()!=TwinTapEngine.State.READY) throw new AssertionError("HUD/runway started Tap Tap");
+            tapTapPad(board,0);
+            if (engine.state()!=TwinTapEngine.State.RUNNING || engine.score()!=0) throw new AssertionError("First pad should only start rhythm");
+        });
+        navigate("일시정지"); requireText("반짝이는 노트도 잠깐 쉬어요.\n준비되면 톡톡, 이어가요!");
+        double pausedAt=engine.elapsed(); int pausedLives=engine.lives(); capture("tap-tap-pause");
+        onMain(()->tapTapPad(board,0));
+        if (engine.elapsed()!=pausedAt || engine.lives()!=pausedLives) throw new AssertionError("Tap Tap pause accepted input/time");
+        navigate("계속 플레이");
+        onMain(()-> {
+            board.pauseGame(); board.resumeGame();
+            int lanes=0, rows=0, priorLives=engine.lives();
+            while (rows<24 || lanes!=15 || engine.simultaneousHits()==0) {
+                if (rows>=256) throw new AssertionError("Missing four-lane/chord coverage");
+                if (engine.targetOffset()>0) engine.advance(engine.targetOffset());
+                int mask=engine.noteMask(); lanes|=mask;
+                nativeNote(board,mask); rows++;
+                if (engine.hits()!=rows || engine.lives()!=priorLives) throw new AssertionError("Native note/chord did not score once");
+            }
+            engine.advance(engine.travelTime()*.35); board.invalidate();
+        });
+        capture("tap-tap-playing");
+        onMain(()-> { callActivityOnPause(activity); callActivityOnResume(activity); }); waitForIdleSync();
+        if (!board.isPaused() || activity.getWindow().getDecorView().findViewWithTag("tapTapPause")==null)
+            throw new AssertionError("Tap Tap foreground needs explicit resume");
+        navigate("계속 플레이");
+        onMain(()-> { engine.advance(1000); board.invalidate(); });
+        waitForIdleSync(); Thread.sleep(250); waitForIdleSync();
+        requireText("다섯 번의 미스, 여기까지 잘 달렸어요."); capture("tap-tap-result");
+        if (local.plays(GameId.TWIN_TAP)!=previousPlays+1 || local.best(GameId.TWIN_TAP)<engine.score() || !local.playerId().equals(playerId))
+            throw new AssertionError("Tap Tap records/identity changed unexpectedly");
+        onMain(()->scroll(activity.getWindow().getDecorView()).fullScroll(View.FOCUS_DOWN)); capture("tap-tap-result-actions");
+        navigate("한 판 더  →");
+        TwinTapView fresh=activity.getWindow().getDecorView().findViewWithTag("tapTapBoard");
+        if (fresh.engine().state()!=TwinTapEngine.State.READY || fresh.engine().lives()!=5 || fresh.engine().score()!=0)
+            throw new AssertionError("Tap Tap retry did not reset");
+        navigate("일시정지"); navigate("홈으로");
+        if (local.plays(GameId.TWIN_TAP)!=previousPlays+1) throw new AssertionError("Tap Tap abandoned run saved a result");
+    }
+    private float tapTapX(TwinTapView board,int lane) {
+        float scale=Math.min(board.getWidth()/360f,board.getHeight()/520f);
+        return (board.getWidth()-360*scale)/2+(58.5f+81*lane)*scale;
+    }
+    private float tapTapY(TwinTapView board) { return board.getHeight()-43*Math.min(board.getWidth()/360f,board.getHeight()/520f); }
+    private void tapTapPad(TwinTapView board,int lane) { tap(board,tapTapX(board,lane),tapTapY(board)); }
+    private void nativeNote(TwinTapView board,int mask) {
+        int first=Integer.numberOfTrailingZeros(mask);
+        if (Integer.bitCount(mask)==1) { tapTapPad(board,first); return; }
+        int second=Integer.numberOfTrailingZeros(mask&~(1<<first));
+        MotionEvent.PointerProperties[] properties=new MotionEvent.PointerProperties[2];
+        MotionEvent.PointerCoords[] coords=new MotionEvent.PointerCoords[2];
+        for (int i=0;i<2;i++) {
+            properties[i]=new MotionEvent.PointerProperties(); properties[i].id=i==0?7:11; properties[i].toolType=MotionEvent.TOOL_TYPE_FINGER;
+            coords[i]=new MotionEvent.PointerCoords(); coords[i].x=tapTapX(board,i==0?first:second); coords[i].y=tapTapY(board); coords[i].pressure=1; coords[i].size=1;
+        }
+        long now=SystemClock.uptimeMillis();
+        sendPointers(board,now,MotionEvent.ACTION_DOWN,1,properties,coords);
+        int partial=board.engine().tappedMask();
+        sendPointers(board,now,MotionEvent.ACTION_MOVE,1,properties,coords);
+        sendPointers(board,now,MotionEvent.ACTION_DOWN,1,properties,coords);
+        if (partial!=(1<<first) || board.engine().tappedMask()!=partial) throw new AssertionError("Hold/repeated pointer judged a second lane");
+        sendPointers(board,now,MotionEvent.ACTION_POINTER_DOWN|(1<<MotionEvent.ACTION_POINTER_INDEX_SHIFT),2,properties,coords);
+        sendPointers(board,now,MotionEvent.ACTION_POINTER_UP|(1<<MotionEvent.ACTION_POINTER_INDEX_SHIFT),2,properties,coords);
+        sendPointers(board,now,MotionEvent.ACTION_UP,1,properties,coords);
+    }
+    private void sendPointers(View board,long time,int action,int count,MotionEvent.PointerProperties[] properties,MotionEvent.PointerCoords[] coords) {
+        MotionEvent event=MotionEvent.obtain(time,time,action,count,properties,coords,0,0,1,1,0,0,android.view.InputDevice.SOURCE_TOUCHSCREEN,0);
+        try { board.dispatchTouchEvent(event); } finally { event.recycle(); }
     }
     private void pad(ColorBreakView board, int lane) {
         float scale = Math.min(board.getWidth()/360f, board.getHeight()/480f);

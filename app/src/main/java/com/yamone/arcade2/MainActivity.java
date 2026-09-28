@@ -190,7 +190,6 @@ public final class MainActivity extends Activity {
     private void instructions(GameId game) {
         if (isPastelGame(game)) { startGame(game); return; }
         String hint = switch (game) {
-            case TWIN_TAP -> "1. 점이 아래 판정선에 닿을 때 해당 레인을 탭해요.\n2. 점이 1개면 한쪽, 2개면 양쪽을 함께 누르세요.\n3. 정확할수록 점수가 높고 연속 성공하면 콤보 보너스!\n\n한 손가락을 번갈아 쓰거나 두 손가락을 동시에 사용할 수 있어요. 5번 놓치거나 60초가 지나면 종료됩니다.";
             case LINE_SURF -> "1. 화면을 누르고 있으면 선을 타고 달려요.\n2. 틈이나 장애물 앞에서 손을 떼면 점프해요.\n3. 착지한 뒤 다시 누르고, 다음 장애물 앞에서 떼세요.\n\n통과할수록 점수와 연속 보너스가 쌓여요. 3번 부딪히거나 60초가 지나면 종료됩니다.";
             case POCKET_PULSE -> "1. 화면을 한 번 탭하면 파동이 시작돼요.\n2. 중심에서 커지는 파란 파동이 보라 목표 링과 겹칠 때 탭하세요.\n3. 오차가 작을수록 PERFECT·GREAT·GOOD 점수가 높아져요.\n\n연속 성공하면 콤보 보너스가 쌓여요. 4번 놓치거나 60초가 지나면 종료됩니다.";
             case STACK_SLICE -> "1. 위에서 움직이는 블록의 튀어나온 쪽을 확인하세요.\n2. 잘라낼 면을 향해 왼쪽 또는 오른쪽으로 스와이프하세요.\n3. 남은 부분이 쌓이며, 무게중심이 지지면을 벗어나면 무너져요.\n\n중앙에 가깝게 쌓을수록 균형 보너스가 커져요. 블록당 제한시간이 지나거나 60초가 되면 종료됩니다.";
@@ -220,8 +219,8 @@ public final class MainActivity extends Activity {
                     "통과 " + engine.passed() + "회  ·  최고 " + engine.bestCombo() + "콤보\nLEVEL " + engine.level() + "  ·  " + (int)engine.elapsed() + "초 플레이"));
         } else if (game == GameId.TWIN_TAP) {
             gameView = new TwinTapView(this, new TwinTapEngine(System.nanoTime()), store.haptics(), engine ->
-                result(currentRun, game, engine.score(), engine.remaining() == 0,
-                    "성공 " + engine.hits() + "회   ·   동시 성공 " + engine.simultaneousHits() + "회   ·   최고 콤보 " + engine.bestCombo() + "회"));
+                result(currentRun, game, engine.score(), false,
+                    "성공 " + engine.hits() + "회  ·  동시 성공 " + engine.simultaneousHits() + "회\n최고 " + engine.bestCombo() + "콤보  ·  LEVEL " + engine.level()));
         } else if (game == GameId.LINE_SURF) {
             gameView = new LineSurfView(this, new LineSurfEngine(System.nanoTime()), store.haptics(), engine ->
                 result(currentRun, game, engine.score(), engine.remaining() == 0,
@@ -269,7 +268,10 @@ public final class MainActivity extends Activity {
             ? "새 최고기록이 저장됐어요. 인터넷 연결 시 온라인 랭킹에도 반영됩니다."
             : "기기와 온라인 랭킹에는 게임별 최고기록 한 개만 유지됩니다.", 12, MUTED));
     }
-    private static boolean isPastelGame(GameId game) { return game == GameId.COLOR_BREAK || game == GameId.ORBIT_SNAP; }
+    private static boolean isPastelGame(GameId game) { return game == GameId.COLOR_BREAK || game == GameId.ORBIT_SNAP || game == GameId.TWIN_TAP; }
+    private static String sheetTag(GameId game, String suffix) {
+        return (game == GameId.ORBIT_SNAP ? "orbit" : game == GameId.TWIN_TAP ? "tapTap" : "color") + suffix;
+    }
     private LinearLayout pastelSheet(String tag) {
         if (gameOverlay != null) content.removeView(gameOverlay);
         gameOverlay = new FrameLayout(this); gameOverlay.setTag(tag); gameOverlay.setBackgroundColor(0xB8EDE5F7);
@@ -284,10 +286,13 @@ public final class MainActivity extends Activity {
     private void pastelPause() {
         if (gameView == null || !isPastelGame(activeGame) || !"game".equals(screen)) return;
         gameView.pauseGame();
-        LinearLayout card = pastelSheet(activeGame == GameId.ORBIT_SNAP ? "orbitPause" : "colorPause");
+        LinearLayout card = pastelSheet(sheetTag(activeGame, "Pause"));
         card.addView(new ArcadeArt(this, ArcadeArt.Symbol.AVATAR, MINT), new LinearLayout.LayoutParams(dp(64), dp(64))); gap(card, 12);
         card.addView(text("잠깐, 숨 고르기", 25, TEXT)); gap(card, 9);
-        card.addView(text(activeGame == GameId.ORBIT_SNAP ? "빙글빙글, 궤도도 잠시 쉬어요.\n준비되면 타이밍을 이어가요!" : "시간도 컬러도 잠시 멈췄어요.\n준비되면 리듬을 이어가요!", 13, MUTED)); gap(card, 22);
+        String pauseHint = activeGame == GameId.ORBIT_SNAP ? "빙글빙글, 궤도도 잠시 쉬어요.\n준비되면 타이밍을 이어가요!"
+            : activeGame == GameId.TWIN_TAP ? "반짝이는 노트도 잠깐 쉬어요.\n준비되면 톡톡, 이어가요!"
+            : "시간도 컬러도 잠시 멈췄어요.\n준비되면 리듬을 이어가요!";
+        card.addView(text(pauseHint, 13, MUTED)); gap(card, 22);
         card.addView(button("계속 플레이", MINT, PANEL, () -> {
             if (gameOverlay != null) { content.removeView(gameOverlay); gameOverlay = null; }
             if (gameView != null) gameView.resumeGame();
@@ -297,7 +302,7 @@ public final class MainActivity extends Activity {
     }
     private void pastelResult(GameId game, int score, boolean record, String detail) {
         screen = "result";
-        LinearLayout card = pastelSheet(game == GameId.ORBIT_SNAP ? "orbitResult" : "colorResult");
+        LinearLayout card = pastelSheet(sheetTag(game, "Result"));
         card.addView(new ArcadeArt(this, ArcadeArt.Symbol.TROPHY, 0xFFAD7932), new LinearLayout.LayoutParams(dp(68), dp(68))); gap(card, 10);
         card.addView(text(record ? "✦  새로운 최고기록!" : "✦  반짝이는 한 판!", 23, TEXT)); gap(card, 6);
         card.addView(text("다섯 번의 미스, 여기까지 잘 달렸어요.", 12, MUTED)); gap(card, 16);
@@ -524,7 +529,8 @@ public final class MainActivity extends Activity {
         super.onResume();
         if (gameView != null) gameView.setForeground(true);
         if ("game".equals(screen) && ((gameView instanceof ColorBreakView && ((ColorBreakView)gameView).isPaused())
-            || (gameView instanceof OrbitView && ((OrbitView)gameView).isPaused()))) pastelPause();
+            || (gameView instanceof OrbitView && ((OrbitView)gameView).isPaused())
+            || (gameView instanceof TwinTapView && ((TwinTapView)gameView).isPaused()))) pastelPause();
         if (banner != null) banner.resume();
         if (ranking != null) ranking.syncPending();
     }

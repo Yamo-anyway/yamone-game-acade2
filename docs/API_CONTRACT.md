@@ -14,7 +14,7 @@ game across integrated and standalone packages.
 |---|---|---|---|
 | Orbit Snap | `orbit_snap` | `normal` | `points` |
 | Color Break | `color_break` | `normal` | `points` |
-| Twin Tap | `twin_tap` | `normal` | `points` |
+| Tap Tap (탭탭, formerly Twin Tap) | `twin_tap` | `normal` | `points` |
 | Line Surf | `line_surf` | `normal` | `points` |
 | Pocket Pulse | `pocket_pulse` | `normal` | `points` |
 | Stack Slice | `stack_slice` | `normal` | `points` |

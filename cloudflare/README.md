@@ -64,3 +64,13 @@ points for endless play, retaining leaderboard records and both reset epochs.
 No Worker deploy or new secret is needed. Scores above 100,000 remain pending
 until this migration is applied. Any still-pending Color Break migration is
 applied by the same command. These migrations never clear test records.
+
+## Tap Tap v0.13.0 name and score ceiling
+
+After pulling main, run the migration command above to apply
+`0005_tap_tap_endless.sql`. It changes the catalog display title to `탭탭` and
+raises its ceiling to at least 1,000,000,000. The stable key remains
+`twin_tap / normal / points`; rankings, play receipts, placement and reset epochs
+are retained. Android shows the new name immediately. The admin/catalog title
+and scores above 100,000 need this database migration; no Worker redeploy is
+required. Pending Orbit/Color Break migrations are applied by the same command.

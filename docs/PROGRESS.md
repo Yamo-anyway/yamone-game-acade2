@@ -1,6 +1,6 @@
 # Development progress
 
-Current stage: **M12 / v0.12.0**. Repository is the source of truth for subsequent work.
+Current stage: **M13 / v0.13.0**. Repository is the source of truth for subsequent work.
 
 | Milestone | Scope | State |
 |---|---|---|
@@ -16,6 +16,31 @@ Current stage: **M12 / v0.12.0**. Repository is the source of truth for subseque
 | M10 | Pastel home, rankings and settings redesign | complete; Android lint/APK, native emulator UI and visual review passed |
 | M11 | Four-lane endless pastel Color Break | complete; Android lint/APK and native play-screen QA passed; D1 ceiling migration pending |
 | M12 | Automatic rotating endless pastel Orbit Snap | complete; Android lint/APK and native play-screen QA passed; D1 ceiling migration pending |
+| M13 | Four-lane endless pastel Tap Tap | implementation/local checks complete; exact-commit Android CI pending |
+
+## M13 implementation
+
+2026-09-28: Renamed Twin Tap to 탭탭 while retaining its stable game ID,
+local record keys and ranking mode/unit. Expanded to four fixed color/shape lanes
+and all six two-finger combinations, with no 60-second cutoff and exactly five
+missed rows ending play. Row travel shortens continuously from 1.6 toward .48
+seconds. Timing/combo awards remain meaningful; scores safely cap at 1 billion.
+The full-height pastel board has top score/hearts, four matching pads and inline
+start guidance. Home artwork is four lanes; pause, foreground recovery and results
+use the existing custom sheets. Other engines and installation identity stay intact.
+
+Local validation: 148 engine checks, 29 integration checks, 10 menu contrast
+checks and operations tests pass. New coverage includes all four lanes/all six
+pairs, ten-minute endless play, edge/wrong/partial inputs, pause, exact fifth miss,
+repeatability, frame deltas and score saturation. The native runner now exercises
+real two-pointer down/up chords, duplicate-pointer/move rejection, lifecycle,
+exactly-once storage and retry, plus captures the scrollable result actions.
+Android lint/build, native screenshots and visual review are pending CI.
+
+Prepared `0005_tap_tap_endless.sql` for the server title and score ceiling. This
+non-destructive migration retains IDs, old scores, receipts, app placement and
+epochs. Production application is pending owner execution; this workspace has no
+Cloudflare deployment connection. Tests remain offline and send no production data.
 
 ## M12 implementation
 

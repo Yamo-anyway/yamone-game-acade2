@@ -78,11 +78,14 @@ public final class ArcadeArt extends View {
                 star(c, 23, 15, 5, ink);
             }
             case TWIN_TAP -> {
-                block(c, 23, 14, 43, 85, 0xFFA9DBD0); block(c, 57, 14, 77, 85, 0xFFB9D9F1);
-                fill(0xFFFFFFFF); c.drawCircle(33, 59, 13, paint); c.drawCircle(67, 36, 13, paint);
-                fill(ink); c.drawCircle(33, 59, 8, paint); fill(0xFF6F91C8); c.drawCircle(67, 36, 8, paint);
-                stroke(ink, 3); c.drawLine(15, 76, 85, 76, paint);
-                star(c, 83, 17, 5, ink);
+                int[] lanes = {0xFFA9DBD0, 0xFFF3B9D0, 0xFFB9D9F1, 0xFFD2C0EF};
+                for (int i = 0; i < 4; i++) {
+                    float x = 14 + i * 19;
+                    block(c, x, 16, x + 15, 85, lanes[i]);
+                    fill(0xFFFFFFFF); c.drawCircle(x + 7.5f, i % 2 == 0 ? 41 : 62, 7, paint);
+                    fill(ink); c.drawCircle(x + 7.5f, i % 2 == 0 ? 41 : 62, 3, paint);
+                }
+                stroke(ink, 2); c.drawLine(12, 76, 88, 76, paint); star(c, 86, 13, 4, ink);
             }
             case LINE_SURF -> {
                 Path wave = new Path(); wave.moveTo(8, 70); wave.cubicTo(24, 90, 43, 46, 58, 63); wave.cubicTo(70, 78, 80, 61, 93, 63);

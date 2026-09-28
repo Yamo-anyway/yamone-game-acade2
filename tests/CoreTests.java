@@ -187,79 +187,105 @@ public final class CoreTests {
             && GameId.POCKET_PULSE.ready && GameId.STACK_SLICE.ready, "all six implemented games unlocked");
     }
     private static void twinHit(TwinTapEngine e) {
-        double wait = e.targetOffset();
-        if (wait > 0) e.advance(wait);
-        int mask = e.noteMask();
-        if ((mask & 1) != 0) e.tapLane(0);
-        if ((mask & 2) != 0) e.tapLane(1);
+        if (e.targetOffset()>0) e.advance(e.targetOffset());
+        int mask=e.noteMask();
+        for (int lane=0;lane<4;lane++) if ((mask&(1<<lane))!=0) e.tapLane(lane);
     }
     private static void twinTapTests() {
-        TwinTapEngine e = new TwinTapEngine(77);
-        e.advance(5); e.tapLane(-1); e.tapLane(2);
-        check(e.state() == TwinTapEngine.State.READY && e.elapsed() == 0, "twin clock waits for explicit start");
-        e.start(); e.tapLane(e.noteMask() == 1 ? 0 : 1);
-        check(e.score() == 0 && e.lives() == 5 && e.tappedMask() == 0, "twin very early tap is ignored");
+        TwinTapEngine e=new TwinTapEngine(77);
+        e.advance(5); e.tapLane(-1); e.tapLane(4);
+        check(e.state()==TwinTapEngine.State.READY && e.elapsed()==0 && e.lives()==5, "tap tap waits for explicit start with five lives");
+        check("탭탭".equals(GameId.TWIN_TAP.title) && "twin_tap".equals(GameId.TWIN_TAP.key), "tap tap rename preserves stable ranking identity");
+        e.start(); e.tapLane(Integer.numberOfTrailingZeros(e.noteMask()));
+        check(e.score()==0 && e.lives()==5 && e.tappedMask()==0, "tap tap very early input is ignored");
         twinHit(e);
-        check(e.score() == 150 && e.hits() == 1 && e.perfects() == 1 && e.combo() == 1, "twin exact single tap awards perfect");
-        int score = e.score(), serial = e.noteSerial();
-        e.tapLane(0); e.tapLane(1);
-        check(e.score() == score && e.noteSerial() == serial, "twin taps outside window cannot duplicate score");
+        check(e.score()==150 && e.hits()==1 && e.perfects()==1 && e.combo()==1, "tap tap exact single awards perfect");
+        int score=e.score(), serial=e.noteSerial();
+        for (int lane=0;lane<4;lane++) e.tapLane(lane);
+        check(e.score()==score && e.noteSerial()==serial, "tap tap repeat input cannot score next note");
+        check(e.noteProgress()<1e-8, "tap tap each new row begins at top without a visual jump");
 
-        TwinTapEngine wrong = new TwinTapEngine(7); wrong.start(); wrong.advance(wrong.targetOffset());
-        int required = wrong.noteMask(); wrong.tapLane(required == 1 ? 1 : 0);
-        check(wrong.lives() == 4 && wrong.score() == 0 && wrong.combo() == 0 && wrong.feedback() == TwinTapEngine.Feedback.MISS, "twin wrong lane costs one life");
+        TwinTapEngine edge=new TwinTapEngine(6); edge.start();
+        edge.advance(edge.targetOffset()-TwinTapEngine.HIT_WINDOW); edge.tapLane(Integer.numberOfTrailingZeros(edge.noteMask()));
+        check(edge.score()==100 && edge.feedback()==TwinTapEngine.Feedback.HIT, "tap tap early window boundary counts as hit");
+        TwinTapEngine lateHit=new TwinTapEngine(6); lateHit.start();
+        lateHit.advance(lateHit.targetOffset()+.1); lateHit.tapLane(Integer.numberOfTrailingZeros(lateHit.noteMask()));
+        check(lateHit.score()==100 && lateHit.lives()==5, "tap tap late valid touch still scores");
+        TwinTapEngine wrong=new TwinTapEngine(7); wrong.start(); wrong.advance(wrong.targetOffset());
+        wrong.tapLane((Integer.numberOfTrailingZeros(wrong.noteMask())+1)%4);
+        check(wrong.lives()==4 && wrong.score()==0 && wrong.combo()==0, "tap tap wrong lane loses exactly one life");
+        for (int lane=0;lane<4;lane++) wrong.tapLane(lane);
+        check(wrong.lives()==4, "tap tap extra pointers after miss cannot multiply life loss");
 
-        TwinTapEngine chord = new TwinTapEngine(77); chord.start();
-        int watchdog = 30;
-        while (chord.noteMask() != 3 && watchdog-- > 0) twinHit(chord);
-        check(watchdog > 0 && chord.noteMask() == 3, "twin deterministic sequence includes double notes");
-        int beforeScore = chord.score(), beforeHits = chord.hits(), beforeCombo = chord.combo();
-        chord.advance(Math.max(0, chord.targetOffset() - .1)); chord.tapLane(0); chord.tapLane(0);
-        check(chord.tappedMask() == 1 && chord.hits() == beforeHits, "twin chord waits for distinct second pointer");
-        chord.advance(.15); chord.tapLane(1);
-        int expectedChord = 200 + Math.min(100, beforeCombo * 10);
-        check(chord.score() == beforeScore + expectedChord && chord.hits() == beforeHits + 1
-            && chord.simultaneousHits() == 1 && chord.feedback() == TwinTapEngine.Feedback.HIT, "twin split multi-touch chord scores once within window");
+        TwinTapEngine chord=new TwinTapEngine(77); chord.start();
+        int watchdog=100;
+        while (Integer.bitCount(chord.noteMask())!=2 && watchdog-->0) twinHit(chord);
+        check(watchdog>0, "tap tap sequence includes two-note chords");
+        int first=Integer.numberOfTrailingZeros(chord.noteMask());
+        int second=Integer.numberOfTrailingZeros(chord.noteMask()&~(1<<first));
+        int beforeScore=chord.score(), beforeHits=chord.hits(), beforeCombo=chord.combo();
+        chord.advance(chord.targetOffset()-.1); chord.tapLane(first); chord.tapLane(first);
+        check(chord.tappedMask()==(1<<first) && chord.hits()==beforeHits, "tap tap chord needs distinct second lane");
+        double at=chord.elapsed(), offset=chord.targetOffset(); int tapped=chord.tappedMask();
+        chord.pause(); chord.advance(99); chord.tapLane(second);
+        check(chord.elapsed()==at && chord.targetOffset()==offset && chord.tappedMask()==tapped, "tap tap pause freezes partial chord and input");
+        chord.resume(); chord.advance(.15); chord.tapLane(second);
+        check(chord.score()==beforeScore+200+Math.min(100,beforeCombo*10) && chord.hits()==beforeHits+1
+            && chord.simultaneousHits()==1 && chord.feedback()==TwinTapEngine.Feedback.HIT, "tap tap resumed split chord scores once with worst timing grade");
+        int bestCombo=chord.bestCombo(); score=chord.score();
+        chord.advance(chord.targetOffset()+TwinTapEngine.HIT_WINDOW);
+        check(chord.lives()==4 && chord.combo()==0 && chord.bestCombo()==bestCombo && chord.score()==score, "tap tap miss resets combo but preserves score and best");
+        twinHit(chord);
+        check(chord.combo()==1, "tap tap restarts combo after miss");
 
-        TwinTapEngine partial = new TwinTapEngine(5); partial.start();
-        while (partial.noteMask() != 3) twinHit(partial);
-        partial.advance(partial.targetOffset()); partial.tapLane(0);
-        double at = partial.elapsed(), offset = partial.targetOffset(); int tapped = partial.tappedMask();
-        partial.pause(); partial.advance(99); partial.tapLane(1);
-        check(partial.elapsed() == at && partial.targetOffset() == offset && partial.tappedMask() == tapped, "twin pause freezes partial chord and input");
-        partial.resume(); partial.tapLane(1);
-        check(partial.hits() > 0 && partial.lives() == 5, "twin resume can complete pending chord");
+        TwinTapEngine partial=new TwinTapEngine(1); partial.start();
+        while (Integer.bitCount(partial.noteMask())!=2) twinHit(partial);
+        partial.advance(partial.targetOffset()); score=partial.score();
+        partial.tapLane(Integer.numberOfTrailingZeros(partial.noteMask()));
+        partial.advance(TwinTapEngine.HIT_WINDOW);
+        check(partial.lives()==4 && partial.score()==score && partial.tappedMask()==0, "tap tap incomplete chord loses one life and gives no partial points");
+        TwinTapEngine ready=new TwinTapEngine(9); ready.pause(); ready.resume(); ready.advance(9);
+        check(ready.state()==TwinTapEngine.State.READY && ready.elapsed()==0, "tap tap pause before start preserves ready");
+        TwinTapEngine failed=new TwinTapEngine(11); failed.start();
+        for (int i=0;i<4;i++) failed.advance(failed.targetOffset()+TwinTapEngine.HIT_WINDOW);
+        check(failed.state()==TwinTapEngine.State.RUNNING && failed.lives()==1, "tap tap fourth miss retains last heart");
+        failed.advance(failed.targetOffset()+TwinTapEngine.HIT_WINDOW);
+        check(failed.state()==TwinTapEngine.State.FINISHED && failed.lives()==0 && failed.score()==0, "tap tap fifth unattended row ends run without passive score");
+        at=failed.elapsed(); failed.start(); failed.resume(); failed.tapLane(0); failed.advance(100);
+        check(failed.elapsed()==at && failed.score()==0 && failed.lives()==0, "tap tap finished state rejects input");
 
-        TwinTapEngine late = new TwinTapEngine(3); late.start();
-        late.advance(late.targetOffset() + TwinTapEngine.HIT_WINDOW);
-        check(late.lives() == 4 && late.feedback() == TwinTapEngine.Feedback.MISS && late.noteSerial() == 1, "twin late note misses exactly at deadline");
-        TwinTapEngine ready = new TwinTapEngine(9); ready.pause(); ready.resume(); ready.advance(9);
-        check(ready.state() == TwinTapEngine.State.READY && ready.elapsed() == 0, "twin pause before start preserves ready state");
-
-        TwinTapEngine failed = new TwinTapEngine(11); failed.start(); failed.advance(99);
-        check(failed.state() == TwinTapEngine.State.FINISHED && failed.lives() == 0 && failed.score() == 0, "twin five unattended notes finish round without passive score");
-        at = failed.elapsed(); failed.start(); failed.tapLane(0); failed.advance(100);
-        check(failed.elapsed() == at && failed.score() == 0 && failed.state() == TwinTapEngine.State.FINISHED, "twin finished state rejects input and time");
-
-        TwinTapEngine clock = new TwinTapEngine(13); clock.start();
-        while (clock.state() != TwinTapEngine.State.FINISHED) {
-            if (clock.targetOffset() >= clock.remaining()) clock.advance(clock.remaining());
-            else twinHit(clock);
+        TwinTapEngine clock=new TwinTapEngine(13); clock.start(); int lanes=0, pairs=0;
+        for (int i=0;i<1500;i++) {
+            int mask=clock.noteMask(), count=Integer.bitCount(mask);
+            if (mask<=0 || mask>15 || count<1 || count>2) throw new AssertionError("Invalid four-lane mask "+mask);
+            lanes|=mask;
+            if (count==2) pairs|=1<<mask;
+            twinHit(clock);
         }
-        check(clock.elapsed() == 60 && clock.lives() == 5 && clock.hits() > 50 && clock.simultaneousHits() > 0, "twin perfect play reaches exact 60 seconds with chords");
-        check(clock.travelTime() < 1.6 && clock.travelTime() >= .95, "twin notes accelerate within readable bound");
-
-        TwinTapEngine a = new TwinTapEngine(123), b = new TwinTapEngine(123), large = new TwinTapEngine(123);
+        check(lanes==15 && Integer.bitCount(pairs)==6, "tap tap uses all four lanes and all six two-finger pairings");
+        check(clock.elapsed()>600 && clock.lives()==5 && clock.hits()==1500 && clock.score()>100000
+            && clock.state()==TwinTapEngine.State.RUNNING, "tap tap continues past ten minutes and old score ceiling");
+        check(clock.travelTime()<.6 && clock.travelTime()>.48 && clock.level()>100, "tap tap keeps accelerating toward readable minimum travel");
+        try {
+            java.lang.reflect.Field field=TwinTapEngine.class.getDeclaredField("score"); field.setAccessible(true);
+            field.setInt(clock,TwinTapEngine.MAX_SCORE-1); twinHit(clock);
+            check(clock.score()==TwinTapEngine.MAX_SCORE && clock.state()==TwinTapEngine.State.RUNNING, "tap tap safely saturates score without ending play");
+        } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
+        TwinTapEngine a=new TwinTapEngine(123), b=new TwinTapEngine(123), large=new TwinTapEngine(123);
         a.start(); b.start(); large.start();
-        for (int i = 0; i < 600; i++) a.advance(1.0 / 60);
-        for (int i = 0; i < 1200; i++) b.advance(1.0 / 120);
+        for (int i=0;i<600;i++) a.advance(1.0/60);
+        for (int i=0;i<1200;i++) b.advance(1.0/120);
         large.advance(10);
-        check(a.state() == b.state() && a.lives() == b.lives() && a.feedbackId() == b.feedbackId()
-            && Math.abs(a.elapsed() - b.elapsed()) < 1e-8, "twin 60Hz and 120Hz deadline consistency");
-        check(large.state() == a.state() && large.lives() == a.lives() && large.feedbackId() == a.feedbackId()
-            && Math.abs(large.elapsed() - a.elapsed()) < 1e-8, "twin delayed frame cannot skip note deadlines");
-        at = ready.elapsed(); ready.start(); ready.advance(Double.NaN); ready.advance(Double.POSITIVE_INFINITY); ready.advance(-1); ready.advance(0);
-        check(ready.elapsed() == at, "twin invalid time deltas ignored");
+        check(a.lives()==b.lives() && a.feedbackId()==b.feedbackId() && Math.abs(a.elapsed()-b.elapsed())<1e-8, "tap tap 60Hz and 120Hz outcomes match");
+        check(large.lives()==a.lives() && Math.abs(large.elapsed()-a.elapsed())<1e-8, "tap tap large delta cannot skip deadlines");
+        TwinTapEngine huge=new TwinTapEngine(8); huge.start(); huge.advance(Double.MAX_VALUE);
+        check(huge.state()==TwinTapEngine.State.FINISHED && huge.feedbackId()==5 && Double.isFinite(huge.elapsed()), "tap tap huge idle delta terminates without overflow");
+        TwinTapEngine copyA=new TwinTapEngine(45), copyB=new TwinTapEngine(45); copyA.start(); copyB.start();
+        for (int i=0;i<100;i++) { twinHit(copyA); twinHit(copyB); }
+        check(copyA.noteMask()==copyB.noteMask() && copyA.score()==copyB.score(), "tap tap seeded sequence is reproducible");
+        at=ready.elapsed(); ready.start(); ready.advance(Double.NaN); ready.advance(Double.POSITIVE_INFINITY); ready.advance(-1); ready.advance(0);
+        ready.tapLane(-1); ready.tapLane(4);
+        check(ready.elapsed()==at && ready.lives()==5, "tap tap invalid time and lanes ignored");
     }
     private static void surfClearNext(LineSurfEngine e) {
         int serial = e.hazardSerial();

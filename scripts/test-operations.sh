@@ -49,6 +49,16 @@ assert db.execute("SELECT max_score, ranking_epoch, local_reset_epoch FROM game_
 assert db.execute("SELECT best_score FROM leaderboard WHERE player_id='orbit-existing'").fetchone()[0] == 850
 assert db.execute("SELECT max_score FROM game_catalog WHERE game_id='twin_tap' AND mode_id='normal'").fetchone()[0] == 100000
 print("PASS endless Orbit Snap raises only its score ceiling, preserving records and reset epochs")
+db.execute("INSERT INTO leaderboard VALUES ('twin-existing', 'twin_tap', 'normal', 'test', 'KR', 900, '1', '1')")
+tap = Path("cloudflare/migrations/0005_tap_tap_endless.sql").read_text()
+db.executescript(tap)
+db.executescript(tap)
+assert db.execute("SELECT title, max_score, ranking_epoch, local_reset_epoch FROM game_catalog WHERE game_id='twin_tap' AND mode_id='normal'").fetchone() == ('탭탭', 1000000000, 1, 0)
+assert db.execute("SELECT best_score FROM leaderboard WHERE player_id='twin-existing'").fetchone()[0] == 900
+assert db.execute("SELECT max_score FROM game_catalog WHERE game_id='line_surf' AND mode_id='normal'").fetchone()[0] == 100000
+assert db.execute("SELECT COUNT(*) FROM game_catalog").fetchone()[0] == 12
+assert db.execute("SELECT enabled, display_order FROM app_games WHERE app_id='yamone_arcade2' AND game_id='twin_tap'").fetchone() == (1, 30)
+print("PASS Tap Tap rename keeps stable IDs, records, epochs and placement while raising its ceiling")
 PY
 
 node --input-type=module <<'JS'

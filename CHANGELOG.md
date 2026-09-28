@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.13.0 — 2026-09-28
+
+- Rename Twin Tap to 탭탭 (Tap Tap) while preserving the shared `twin_tap` ID and existing records.
+- Expand to four colored/shaped lanes with single notes and all six two-finger pairings. Remove the 60-second cutoff; the fifth missed row ends play.
+- Continuously shorten note travel time, retain timing/combo scoring and safely support long-run scores up to 1,000,000,000.
+- Add a full-height pastel board, four pads, five hearts, immediate entry and custom pause/result cards; update the home illustration to four lanes.
+- Add a repeatable D1 migration for the display name and score ceiling, preserving IDs, records, placement and reset epochs.
+- Pass 148 core and 29 integration checks; extend native UI coverage to four-lane input, actual two-pointer chords, ignored hold/release, lifecycle and exactly-once records.
+
 ## 0.12.0 — 2026-09-28
 
 - Rebuild Orbit Snap as continuous automatic rotation with target-tap timing, no time limit and five misses. Missing a target also costs a life.
