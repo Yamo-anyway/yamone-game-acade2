@@ -1,6 +1,6 @@
 # Development progress
 
-Current stage: **M09 / v0.9.0**. Repository is the source of truth for subsequent work.
+Current stage: **M10 / v0.10.0**. Repository is the source of truth for subsequent work.
 
 | Milestone | Scope | State |
 |---|---|---|
@@ -13,6 +13,24 @@ Current stage: **M09 / v0.9.0**. Repository is the source of truth for subsequen
 | M07 | Integration, lifecycle/aspect ratios, debug APK QA | complete; 115 core + 17 integration checks, Android lint and debug APK passed |
 | M08 | Shared Cloudflare game-by-game online ranking | complete; 115 core + 22 integration checks and Android CI passed |
 | M09 | Play analytics, remote catalog, ranking reset and admin dashboard | complete; production migration/deployment, live smoke test and Android CI passed |
+| M10 | Pastel home, rankings and settings redesign | implemented; Android build and native visual QA pending |
+
+## M10 implementation
+
+2026-09-28: Replaced the dark menu shell with cream, lilac, mint and peach
+surfaces, original code-native game illustrations and a bunny profile avatar.
+Home uses an illustrated featured card and responsive game tiles. Rankings
+retain real server data and all states, with medal podiums, an explicit personal
+rank card and a horizontally scrolling selected game picker. Settings groups
+profile, haptics and data controls; destructive deletion still needs confirmation.
+Gameplay engines, dark game boards, IDs, catalog sync and scoring are unchanged.
+Menus select a one-column game layout on narrow screens or larger font settings.
+
+Local checks: 115 engine checks, 29 integration checks, Worker operations tests
+and whitespace checks passed. Added an offline-only emulator instrumentation
+runner for native navigation and screenshots at standard and large-text sizes.
+Ranking names/scores in screenshot fixtures are test-only, never shipped in the
+app or uploaded to production. Exact-commit Android CI and screenshots pending.
 
 ## M09 implemented
 

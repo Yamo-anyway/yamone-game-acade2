@@ -22,10 +22,10 @@ public final class BannerSlot extends FrameLayout {
     private final TextView status;
     public BannerSlot(Activity activity) {
         super(activity); this.activity = activity;
-        setBackgroundColor(0xFF10162B);
+        setBackgroundColor(0xFFF2EEF7);
         int h = Math.round(60 * getResources().getDisplayMetrics().density);
         setMinimumHeight(h);
-        status = new TextView(activity); status.setTextSize(10); status.setTextColor(0xFF8D97B7);
+        status = new TextView(activity); status.setTextSize(10); status.setTextColor(0xFF746B83);
         status.setGravity(Gravity.CENTER);
         status.setText(BuildConfig.TEST_BANNER_ENABLED ? "테스트 배너를 불러오는 중" : "배너 광고 영역");
         addView(status, new LayoutParams(LayoutParams.MATCH_PARENT, h));

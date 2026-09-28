@@ -104,6 +104,16 @@ play-count analytics.
 - Installation ID creation, terminal game results and record deletion are synchronously committed. Nickname and vibration preferences remain non-critical asynchronous settings writes.
 - CI checks all six rules engines, six-game unlock state, width/height board fitting, test-only banner policy, no interstitial/rewarded ad classes, disabled release ads, live ranking contract/retry markers and local-record durability before Android lint/APK assembly.
 
+## Menu visual language (v0.10.0)
+
+Home, rankings, settings and result pages use a bright cream/lilac/peach palette,
+dark readable text, rounded cards, native ripple feedback and selected icon tabs.
+Game illustration and profile artwork is drawn as native vectors on Canvas.
+Game boards retain their dark, high-contrast playfield and original behavior.
+Two-column game cards collapse to one column on narrow screens or large text.
+Ranking podiums use only the returned real entries; empty/offline/error states
+must remain explicit rather than showing fabricated competitors.
+
 ## Next development boundaries
 
 Implement one game per stage using the same shared shell. UI artwork is code-native. Original image is a concept reference, not a requirement to rasterize its mock phone UI into the app.

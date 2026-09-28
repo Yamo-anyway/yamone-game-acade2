@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0 — 2026-09-28
+
+- Redesign home, rankings, settings and result styling in a cream/lilac/peach palette with rounded cards, clear typography and selected icon navigation.
+- Add six original scalable Canvas game illustrations and a small bunny profile avatar; no image downloads or additional runtime dependencies.
+- Add featured-game art, adaptive game tiles, horizontally scrolling ranking choices, real-data medal podiums, personal ranking cards and designed loading/empty/offline/error states.
+- Group settings into profile, haptics and records; preserve nickname sync, confirmation before deletion and all existing ranking/catalog behavior.
+- Keep dark gameplay boards, scoring, installation identity and the isolated test banner unchanged in behavior. Add offline emulator UI fixtures/screenshots for standard and larger-text layouts.
+
 ## 0.9.0 — 2026-09-28
 
 - Add idempotent game-start and game-finish receipts so actual attempts, completions, per-game users, app source and country totals can be measured without double-counting offline retries.
