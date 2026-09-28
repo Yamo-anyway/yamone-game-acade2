@@ -16,7 +16,7 @@ Current stage: **M13 / v0.13.0**. Repository is the source of truth for subseque
 | M10 | Pastel home, rankings and settings redesign | complete; Android lint/APK, native emulator UI and visual review passed |
 | M11 | Four-lane endless pastel Color Break | complete; Android lint/APK and native play-screen QA passed; D1 ceiling migration pending |
 | M12 | Automatic rotating endless pastel Orbit Snap | complete; Android lint/APK and native play-screen QA passed; D1 ceiling migration pending |
-| M13 | Four-lane endless pastel Tap Tap | implementation/local checks complete; exact-commit Android CI pending |
+| M13 | Four-lane endless pastel Tap Tap | complete; Android lint/APK and native UI QA passed; D1 title/ceiling migration pending |
 
 ## M13 implementation
 
@@ -35,7 +35,19 @@ pairs, ten-minute endless play, edge/wrong/partial inputs, pause, exact fifth mi
 repeatability, frame deltas and score saturation. The native runner now exercises
 real two-pointer down/up chords, duplicate-pointer/move rejection, lifecycle,
 exactly-once storage and retry, plus captures the scrollable result actions.
-Android lint/build, native screenshots and visual review are pending CI.
+GitHub Actions run **36389515046**, exact application/test commit
+**97a7b66899c00e19155849ca1fe67245c1824361**: **SUCCESS**.
+All local checks, Android lint and debug/instrumentation APK builds passed.
+Android 10 Pixel 2 emulator passed at 411dp/font 1.0 and 320dp/font 1.3.
+The native runner scored at least 24 rows across all four physical pad positions,
+including real two-pointer chords, without duplicate scores or unexpected misses.
+Pause/foreground recovery, exactly-once records, identity and clean retry passed;
+the menu, Color Break and Orbit regression scenarios also passed.
+Reviewed standard and compact gameplay, standard result and scrolled large-text
+result actions: lanes, instructions, controls and all result actions fit without
+overlap. No physical-device timing feel, live ranking upload or live ad display is
+claimed. APK ZIP SHA-256:
+`0e5c0a479cf855f6e58c069ee8298329844be4ed49a2c94303b9b6b8dd7d6290`.
 
 Prepared `0005_tap_tap_endless.sql` for the server title and score ceiling. This
 non-destructive migration retains IDs, old scores, receipts, app placement and
