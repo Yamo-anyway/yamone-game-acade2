@@ -1,4 +1,5 @@
 import { ADMIN_HTML } from "./admin-page.js";
+import { AdminSecurityError, authorizeAdmin, isAdminPath, secureAdminResponse } from "./admin-security.js";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -13,23 +14,15 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3
 
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
+    const path = url.pathname.replace(/\/+$/, "") || "/";
+    // Admin dispatch must precede public CORS preflight and database handling.
+    if (isAdminPath(path)) return handleAdmin(request, env, url, path);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
     if (!env.DB) return json({ error: "DATABASE_NOT_CONFIGURED" }, 500);
 
     try {
-      const url = new URL(request.url);
-      const path = url.pathname.replace(/\/+$/, "") || "/";
-
       if (request.method === "GET" && path === "/health") return health(env);
-      if (request.method === "GET" && path === "/admin") {
-        return new Response(ADMIN_HTML, {
-          headers: {
-            "Content-Type": "text/html; charset=utf-8",
-            "Cache-Control": "no-store",
-            "Content-Security-Policy": "default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'",
-          },
-        });
-      }
       if (request.method === "GET" && path === "/v1/catalog") return publicCatalog(env, url);
       if (request.method === "POST" && path === "/v1/plays/event") return recordPlayEvent(request, env);
       if (request.method === "POST" && path === "/v1/ranking/submit") return submitRanking(request, env);
@@ -40,18 +33,6 @@ export default {
         return readRanking(env, rankingMatch[1], rankingMatch[2], url.searchParams.get("playerId"));
       }
 
-      if (path.startsWith("/v1/admin/")) {
-        requireAdmin(request, env);
-        if (request.method === "GET" && path === "/v1/admin/session") return json({ ok: true });
-        if (request.method === "GET" && path === "/v1/admin/stats") return adminStats(env, url);
-        if (request.method === "GET" && path === "/v1/admin/catalog") return adminCatalog(env, url);
-        if (request.method === "POST" && path === "/v1/admin/games") return adminSaveGame(request, env);
-        if (request.method === "PATCH" && path === "/v1/admin/games/visibility") return adminVisibility(request, env);
-        if (request.method === "PATCH" && path === "/v1/admin/apps/order") return adminOrder(request, env);
-        if (request.method === "PATCH" && path === "/v1/admin/apps/settings") return adminSettings(request, env);
-        if (request.method === "POST" && path === "/v1/admin/rankings/reset") return adminResetRanking(request, env);
-      }
-
       return json({ error: "NOT_FOUND" }, 404);
     } catch (error) {
       if (error instanceof HttpError) return json({ error: error.code, ...error.details }, error.status);
@@ -60,6 +41,38 @@ export default {
     }
   },
 };
+
+async function handleAdmin(request, env, url, path) {
+  try {
+    await authorizeAdmin(request, env);
+    if (!env.DB) throw new HttpError(503, "DATABASE_NOT_CONFIGURED");
+    let response;
+    if (request.method === "GET" && path === "/admin") {
+      const nonce = crypto.randomUUID().replaceAll("-", "");
+      response = new Response(ADMIN_HTML.replace("__ADMIN_SCRIPT_NONCE__", nonce), {
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Security-Policy": `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; connect-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'`,
+        },
+      });
+    } else if (request.method === "GET" && path === "/v1/admin/session") response = json({ ok: true });
+    else if (request.method === "GET" && path === "/v1/admin/stats") response = await adminStats(env, url);
+    else if (request.method === "GET" && path === "/v1/admin/catalog") response = await adminCatalog(env, url);
+    else if (request.method === "POST" && path === "/v1/admin/games") response = await adminSaveGame(request, env);
+    else if (request.method === "PATCH" && path === "/v1/admin/games/visibility") response = await adminVisibility(request, env);
+    else if (request.method === "PATCH" && path === "/v1/admin/apps/order") response = await adminOrder(request, env);
+    else if (request.method === "PATCH" && path === "/v1/admin/apps/settings") response = await adminSettings(request, env);
+    else if (request.method === "POST" && path === "/v1/admin/rankings/reset") response = await adminResetRanking(request, env);
+    else response = json({ error: "NOT_FOUND" }, 404);
+    return secureAdminResponse(response);
+  } catch (error) {
+    // Awaited handlers keep validation/DB errors inside the admin header boundary.
+    if (error instanceof HttpError || error instanceof AdminSecurityError) {
+      return secureAdminResponse(json({ error: error.code, ...error.details }, error.status));
+    }
+    return secureAdminResponse(json({ error: "INTERNAL_ERROR" }, 500));
+  }
+}
 
 async function health(env) {
   const rows = await env.DB.prepare(
@@ -585,22 +598,6 @@ async function hashPlayerId(env, playerId) {
   );
   const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(playerId));
   return [...new Uint8Array(signature)].map(byte => byte.toString(16).padStart(2, "0")).join("");
-}
-
-function requireAdmin(request, env) {
-  if (!env.RANKING_ADMIN_SECRET) throw new HttpError(503, "ADMIN_SECRET_NOT_CONFIGURED");
-  const header = request.headers.get("Authorization") || "";
-  const supplied = header.startsWith("Bearer ") ? header.slice(7) : "";
-  if (!constantTimeEqual(supplied, env.RANKING_ADMIN_SECRET)) throw new HttpError(401, "UNAUTHORIZED");
-}
-
-function constantTimeEqual(left, right) {
-  const a = new TextEncoder().encode(String(left));
-  const b = new TextEncoder().encode(String(right));
-  let difference = a.length ^ b.length;
-  const length = Math.max(a.length, b.length);
-  for (let index = 0; index < length; index++) difference |= (a[index % Math.max(1, a.length)] || 0) ^ (b[index % Math.max(1, b.length)] || 0);
-  return difference === 0;
 }
 
 function auditStatement(env, action, gameId, modeId, appId, detail) {

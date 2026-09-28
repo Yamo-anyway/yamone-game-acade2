@@ -15,6 +15,33 @@ Current stage: **M10 / v0.10.0**. Repository is the source of truth for subseque
 | M09 | Play analytics, remote catalog, ranking reset and admin dashboard | complete; production migration/deployment, live smoke test and Android CI passed |
 | M10 | Pastel home, rankings and settings redesign | complete; Android lint/APK, native emulator UI and visual review passed |
 
+## Administrator hardening — prepared, not deployed
+
+2026-09-28: Reviewed latest main `3cd4a4b5b05d96218806ccd057c121ef0309e1be`
+and the M09 rollout record `b8dd769a452475f7f41202adbe97abb5794e9638`.
+Prepared an isolated security patch replacing shared admin Bearer authentication
+with Cloudflare Access JWT validation, an explicit administrator HTTPS origin,
+per-identity rate limiting, CSRF checks, private responses and nonce CSP.
+Browser credential storage is removed; Access owns the session/logout lifecycle.
+Public game handlers, player HMAC secret and D1 schema are unchanged.
+
+Local validation: **38 security tests**, **29 integration checks**, **115 core
+checks**, repeatable in-memory SQLite migration/seed validation, rendered admin
+script syntax, `git diff --check`, and Wrangler **4.142.0 dry-run bundling** passed.
+`npm audit --omit=dev --audit-level=high` reported **0 vulnerabilities** in runtime
+dependencies. JWT tests use generated local keys, mocked JWKS and a DB spy; no
+production credentials or traffic. Real-browser smoke was attempted but could
+not start: this runtime has no Chromium binary and the Playwright download
+returned an invalid archive. Browser/CSP UI and live Access cookie/login/logout
+checks therefore remain in the rollout checklist; they are not claimed as passed.
+No new local Android lint/APK/device test is claimed for this server-only patch.
+Exact-commit PR CI is tracked separately on GitHub.
+
+See [`cloudflare/ADMIN_SECURITY.md`](../cloudflare/ADMIN_SECURITY.md). Access and
+custom-domain prerequisites need owner configuration and deployment approval.
+No production secret, Access setting, D1 migration or Worker deployment changed.
+Android stays at M10/v0.10.0; this is an unreleased server security patch.
+
 ## M10 implementation
 
 2026-09-28: Replaced the dark menu shell with cream, lilac, mint and peach
