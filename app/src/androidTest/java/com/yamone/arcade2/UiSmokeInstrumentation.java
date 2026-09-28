@@ -127,28 +127,29 @@ public final class UiSmokeInstrumentation extends Instrumentation {
         capture("orbit-playing");
         if (engine.angle() == angle) throw new AssertionError("Orbit did not rotate without holding");
         navigate("일시정지"); requireText("빙글빙글, 궤도도 잠시 쉬어요.\n준비되면 타이밍을 이어가요!");
-        double pausedAt = engine.elapsed(); angle = engine.angle();
+        double pausedAt = engine.elapsed(); angle = engine.angle(); int pausedLives = engine.lives();
         capture("orbit-pause");
         if (engine.elapsed() != pausedAt || engine.angle() != angle) throw new AssertionError("Orbit pause did not freeze rotation");
         runOnMainSync(() -> tap(board, board.getWidth()/2f, board.getHeight()-100));
-        if (engine.lives() != 5) throw new AssertionError("Paused board accepted input");
+        if (engine.lives() != pausedLives) throw new AssertionError("Paused board accepted input");
         navigate("계속 플레이");
         runOnMainSync(() -> {
+            int livesBefore = engine.lives();
             tap(board, board.getWidth()/2f, 20);
-            if (engine.lives() != 5 || engine.score() != 0) throw new AssertionError("Score area incorrectly judges a tap");
+            if (engine.lives() != livesBefore || engine.score() != 0) throw new AssertionError("Score area incorrectly judges a tap");
             for (int i=0; i<20; i++) {
                 engine.advance(((engine.target()-engine.angle()+360)%360) / engine.speed());
                 float scale = Math.min(board.getWidth()/360f, board.getHeight()/500f);
                 tap(board, board.getWidth()/2f, board.getHeight()-42*scale);
             }
-            if (engine.jumps() != 20 || engine.lives() != 5 || engine.score() <= 0)
+            if (engine.jumps() != 20 || engine.lives() != livesBefore || engine.score() <= 0)
                 throw new AssertionError("Orbit actual pad input did not award twenty target hits");
             long now = SystemClock.uptimeMillis();
             MotionEvent move = MotionEvent.obtain(now, now, MotionEvent.ACTION_MOVE, board.getWidth()/2f, board.getHeight()-100, 0);
             MotionEvent release = MotionEvent.obtain(now, now+1, MotionEvent.ACTION_UP, board.getWidth()/2f, board.getHeight()-100, 0);
             try { board.dispatchTouchEvent(move); board.dispatchTouchEvent(release); }
             finally { move.recycle(); release.recycle(); }
-            if (engine.jumps() != 20 || engine.lives() != 5) throw new AssertionError("Move/release incorrectly judged a target");
+            if (engine.jumps() != 20 || engine.lives() != livesBefore) throw new AssertionError("Move/release incorrectly judged a target");
             board.invalidate();
         });
         capture("orbit-combo");

@@ -109,7 +109,7 @@ play-count analytics.
 Home, rankings, settings and result pages use a bright cream/lilac/peach palette,
 dark readable text, rounded cards, native ripple feedback and selected icon tabs.
 Game illustration and profile artwork is drawn as native vectors on Canvas.
-Five game boards retain their dark playfield. Color Break v2 adds a full pastel board and custom pause/result sheets in v0.11.0.
+Four game boards retain their dark playfield. Color Break v2 (v0.11.0) and Orbit Snap v2 (v0.12.0) use full pastel boards and custom pause/result sheets.
 Two-column game cards collapse to one column on narrow screens or large text.
 Ranking podiums use only the returned real entries; empty/offline/error states
 must remain explicit rather than showing fabricated competitors.

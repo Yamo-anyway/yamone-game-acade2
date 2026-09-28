@@ -7,6 +7,7 @@ adb shell svc data disable
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 mkdir -p ui-preview
+trap 'adb pull /sdcard/Android/data/com.yamone.arcade2/files/ui-preview/. ui-preview/ || true' EXIT
 capture() {
   adb shell am force-stop com.yamone.arcade2
   adb shell am instrument -w -e scenario "$1" com.yamone.arcade2.test/com.yamone.arcade2.UiSmokeInstrumentation | tee "ui-preview/$1.log"
@@ -21,4 +22,3 @@ adb shell wm density 540
 adb shell settings put system font_scale 1.3
 adb shell wm density
 capture large-text
-adb pull /sdcard/Android/data/com.yamone.arcade2/files/ui-preview/. ui-preview/

@@ -33,7 +33,11 @@ window edges, automatic misses, five-life termination, paused feedback, frame
 rate consistency, huge deltas, target wraps and bounded integer scores.
 Native smoke coverage adds actual timing-pad input, automatic motion, explicit
 foreground resume, exactly-once score/play storage and clean retry at both sizes.
-Android lint/build, emulator screenshots and visual review are pending CI.
+Initial CI passed lint/build and the standard emulator scenario. The compact
+scenario exposed a test assumption that all five lives remain after taking a
+live-play screenshot; automatic rotation can legitimately miss in that interval.
+Assertions now compare lives immediately before/after ignored input, and captures
+are collected even if a later assertion fails. Final exact-commit CI is pending.
 
 Added `0004_orbit_snap_endless.sql` to increase only Orbit's max score to
 1,000,000,000 without deleting rows or changing reset epochs. Production D1
