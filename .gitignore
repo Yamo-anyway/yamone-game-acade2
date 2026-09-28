@@ -5,6 +5,8 @@ local.properties
 *.iml
 *.jks
 *.keystore
+# Public development-only key; never use this key to sign a production release.
+!ci/debug.keystore
 keystore.properties
 .env
 .env.*

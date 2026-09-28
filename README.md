@@ -39,6 +39,14 @@ gradle :app:lintDebug :app:assembleDebug
 
 GitHub의 **Actions → Android → 성공한 실행 → yamone-arcade2-debug**에서도 APK를 받습니다. APK 경로는 `app/build/outputs/apk/debug/app-debug.apk`입니다.
 
+## 테스트 APK 설치
+
+v0.14.0부터는 고정된 공개 개발용 서명(`ci/debug.keystore`)을 사용합니다.
+이후 debug APK끼리는 같은 서명으로 업데이트할 수 있습니다. 기존 CI는 빌드마다
+다른 키를 만들었으므로, 이미 전달한 v0.13.0 위에 이번 APK를 덮어쓸 수 없습니다.
+기존 앱을 삭제하면 기기 기록과 설치 ID가 초기화되므로 주의하세요.
+정식 배포에는 별도의 비공개 출시 서명이 필요합니다.
+
 ## 이어서 개발
 
 `docs/PRODUCT.md`, `docs/PROGRESS.md`, `docs/API_CONTRACT.md`를 먼저 읽습니다. 게임별 최신 승인 규칙과 공유 game ID를 유지합니다. 랭킹 서버는 기존 Cloudflare Worker/D1을 사용합니다.

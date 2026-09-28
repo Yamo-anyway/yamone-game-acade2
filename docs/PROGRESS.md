@@ -36,7 +36,14 @@ bounds, pause, frame deltas, exact fifth miss and stable IDs. The native UI runn
 now drives actual Pocket Pulse pad events, repeated/held input, five-circle play,
 foreground recovery, exactly-once storage and retry, and verifies Line Surf stays
 hidden even when a stale catalog marks it enabled/featured while retaining its
-old records. Android lint/build/emulator validation is pending exact-commit CI.
+old records. The first exact-commit CI passed Android lint/APK assembly; native UI validation is in progress.
+APK certificate inspection found the old CI generated a new debug key for every
+runner. Added an explicitly public development-only key for stable future debug
+updates; release signing remains separate. The delivered v0.13.0 certificate is
+`acef1881052e56a5e3276e8e74df62ab5c71a043e7f0ff6a71aa6bcfa4ffe58a`; its original
+private key is unavailable, so in-place updating from that APK is not possible.
+Do not advise uninstalling without explaining local record/identity loss.
+Final fixed-signature APK and exact-commit CI validation are pending.
 
 Migration `0006_pocket_pulse_endless.sql` is prepared and repeatable; owner
 application is pending. It raises Pocket Pulse's ceiling and hides only Arcade 2's

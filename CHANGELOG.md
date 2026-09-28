@@ -2,6 +2,8 @@
 
 ## 0.14.0 — 2026-09-28
 
+- Fix disposable-CI debug signing with an explicitly public development key for stable future updates. The previously delivered v0.13.0 has a different certificate and cannot be updated in place; document the local-data/identity consequence of uninstalling.
+
 - Hide Line Surf from the home/ranking selectors, including stale/offline catalogs, while preserving its records and shared ID.
 - Rebuild Pocket Pulse as endless concentric colored waves: progressively 1–5 simultaneous circles, increasing speed, thin dashed inner/outer timing guides and five misses.
 - Add pastel full-height gameplay, inline start, multi-pointer fresh-down input, five hearts, combo and custom pause/result sheets.
