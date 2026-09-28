@@ -42,6 +42,9 @@ if (normalizeCountry('kr') !== 'KR' || normalizeCountry('KOR') !== '') throw new
 for (const marker of ['전체 통계', '국가별 통계', '사용자별 게임 기록', '게임 노출·순서·랭킹 관리', '랭킹+앱기록']) {
   if (!ADMIN_HTML.includes(marker)) throw new Error('admin marker: ' + marker);
 }
+const inlineScript = ADMIN_HTML.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+if (!inlineScript) throw new Error('admin inline script missing');
+new Function(inlineScript);
 console.log('PASS Worker validation helper and admin dashboard contract');
 JS
 
