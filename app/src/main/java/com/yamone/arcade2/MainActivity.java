@@ -48,7 +48,7 @@ import java.util.UUID;
 
 public final class MainActivity extends Activity {
     private static final int BG = 0xFFFAF8FF, PANEL = 0xFFFFFFFF, MINT = 0xFF7754AD, TEXT = 0xFF302A43, MUTED = 0xFF746B83;
-    private static final int LILAC = 0xFFF0E9FC, BORDER = 0xFFEDE7F4, PINK = 0xFFB74D78, GAME_BG = 0xFF090E22;
+    private static final int LILAC = 0xFFF0E9FC, BORDER = 0xFFEDE7F4, PINK = 0xFFAC416D, GAME_BG = 0xFF090E22;
     private static final String STATE_SCREEN = "screen", STATE_GAME = "active_game", STATE_ACTIVE_RUN = "active_run";
     private LinearLayout root, nav;
     private FrameLayout content;
