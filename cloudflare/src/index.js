@@ -484,7 +484,7 @@ async function upsertLeaderboard(env, playerHash, input) {
     "SELECT best_score FROM leaderboard WHERE player_id = ? AND game_id = ? AND mode_id = ?"
   ).bind(playerHash, input.gameId, input.modeId).first();
   const previousBest = Number(existing?.best_score || 0);
-  const now = new Date().toISOString();
+  const now = Math.floor(Date.now() / 1000);
   await env.DB.prepare(
     `INSERT INTO leaderboard(player_id, game_id, mode_id, nickname, country_code, best_score, achieved_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
