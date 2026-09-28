@@ -37,7 +37,10 @@ Initial CI passed lint/build and the standard emulator scenario. The compact
 scenario exposed a test assumption that all five lives remain after taking a
 live-play screenshot; automatic rotation can legitimately miss in that interval.
 Assertions now compare lives immediately before/after ignored input, and captures
-are collected even if a later assertion fails. Final exact-commit CI is pending.
+are collected even if a later assertion fails. The second CI run passed both
+emulator scenarios. Visual review then found the ring background covering the
+instruction on compact boards; the ring now fits between dedicated instruction
+and feedback regions. Final exact-commit CI for that layout fix is pending.
 
 Added `0004_orbit_snap_endless.sql` to increase only Orbit's max score to
 1,000,000,000 without deleting rows or changing reset epochs. Production D1

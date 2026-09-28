@@ -62,7 +62,10 @@ public final class OrbitView extends GameView {
         label(c, String.format(Locale.US, "×%.2f", engine.speed()/120), 310, 89, 11, PURPLE, true);
         label(c, "민트 구간에 들어오면, 톡!", 180, 126, 12, 0xFF286F60, true);
 
-        float cx = 180, cy = height/2 + 7, radius = 108;
+        // Reserve separate vertical space for the instruction and lower feedback.
+        float orbitTop = 145, orbitBottom = height - 109;
+        float cx = 180, cy = (orbitTop + orbitBottom)/2;
+        float radius = Math.min(108, (orbitBottom-orbitTop)/2 - 32);
         fill(0xFFEFF7FA); c.drawCircle(cx, cy, radius + 32, paint);
         fill(0xFFF5F0FC); c.drawCircle(cx, cy, radius - 22, paint);
         stroke(0xFFE0D7EF, 1); c.drawCircle(cx, cy, radius + 22, paint);
