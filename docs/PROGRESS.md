@@ -1,6 +1,6 @@
 # Development progress
 
-Current stage: **M07 / v0.7.0**. Repository is the source of truth for subsequent work.
+Current stage: **M08 / v0.8.0**. Repository is the source of truth for subsequent work.
 
 | Milestone | Scope | State |
 |---|---|---|
@@ -11,6 +11,7 @@ Current stage: **M07 / v0.7.0**. Repository is the source of truth for subsequen
 | M05 | Pocket Pulse | complete; 96 core checks, Android lint and debug APK passed |
 | M06 | Stack Slice | complete; 115 core checks, Android lint and debug APK passed |
 | M07 | Integration, lifecycle/aspect ratios, debug APK QA | complete; 115 core + 17 integration checks, Android lint and debug APK passed |
+| M08 | Shared Cloudflare game-by-game online ranking | implemented; 115 core + 22 integration checks passed locally; Android CI pending |
 
 ## M01 implemented
 
@@ -102,13 +103,21 @@ GitHub Actions run **36053687516**, exact code commit **18c011345223288ffee8c64a
 
 No device/emulator play, installed APK, physical touch/rotation, process-kill recovery UI, screen-ratio QA or actual test-ad impression is claimed.
 
-All autonomously implementable client milestones M01–M07 are complete. Further release work is gated by physical-device QA and owner-provided production ad/ranking/store configuration, so scheduled development can pause without implying store readiness.
+M01–M07 completed the original offline client checkpoint. M08 resumed after the owner supplied and extended the shared Cloudflare ranking service.
+
+## M08 implemented and validation
+
+2026-09-28: Reused the existing `yamone-games-ranking-api` Worker and D1 `leaderboard` table. The Worker now accepts `orbit_snap`, `color_break`, `twin_tap`, `line_surf`, `pocket_pulse` and `stack_slice`, all in `normal` mode with `points` units. A production smoke test submitted, ranked, read and deleted a temporary Orbit Snap score successfully, leaving the board empty afterward.
+
+The Android client now submits new game-specific best scores, derives a two-letter country code from the configured locale, retries durable pending scores after reconnection, synchronizes nickname changes, and persists online deletion requests. The ranking screen provides six independent selectors plus TOP 100, participant count, current-player and nearby rows. The app never contains Cloudflare credentials; the Worker hashes the package-local installation ID before D1 storage.
+
+`bash scripts/test-core.sh`: **115 checks passed**. `bash scripts/check-integration.sh`: **22 checks passed**, including the live Worker URL, shared `normal`/`points` contract, durable upload/deletion markers and online ranking UI. `git diff --check` passed. Local Android lint/APK assembly remains unavailable because this environment has no Gradle or Android SDK; exact-commit CI is pending.
 
 ## Known limits / next
 
 - Canvas visual/game feel, installed-APK safe areas, physical multi-touch/rotation and actual test-ad rendering still require emulator/device QA.
 - Gradle wrapper is not yet committed; CI installs exact Gradle 8.11.1. Add standard wrapper in an environment with Gradle.
-- Live ad IDs, server connection and store submission pending user-provided information; these do not block game development.
+- Live ad IDs and store submission remain pending. The ranking server is connected; installed-device ranking UI/network QA is still required.
 
 ## Automation
 

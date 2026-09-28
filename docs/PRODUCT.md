@@ -34,7 +34,7 @@ Exact numbers below are initial playable tuning, not a claim that the user fixed
 - Wall travel time: 2.4 seconds initially, decreasing by .022 per elapsed second, minimum 1.1 seconds. A .28-second feedback/recovery separates walls.
 - 60 active seconds maximum. Time-limit termination takes precedence over a crossing exactly at 60 seconds. No score is awarded on tap alone; one judgement per wall.
 - Pause freezes timer and wall/recovery. Returning from background needs explicit resume, without lane movement on the resume tap. Finished games reject input.
-- Home, instructions, pause/retry, result and local records share the native shell. Online ranking remains disconnected; ads unchanged.
+- Home, instructions, pause/retry, result and local records share the native shell. Online ranking uses the shared Cloudflare leaderboard; ads unchanged.
 
 ## Twin Tap v1
 
@@ -44,7 +44,7 @@ Exact numbers below are initial playable tuning, not a claim that the user fixed
 - A single note is worth 150 PERFECT / 100 HIT; a double note is worth 300 / 200. Each completed note adds a 10-point combo bonus per prior consecutive success, capped at +100.
 - The first target arrives at 1.6 seconds. Inter-note interval accelerates from 1.15 seconds to a .72-second minimum; visual travel time decreases from 1.6 seconds to a .95-second minimum. Double notes begin after the first two notes and occur at a deterministic 30% rate from the seeded sequence.
 - 60 active seconds maximum; the time boundary wins over a deadline at the same instant. Pause freezes a partially completed double note and all timing. Resume taps do not judge a note. Finished games reject input.
-- Results include hits, successful double notes and best combo. Local score/play count uses the existing per-game store; ranking server and production ads remain disconnected.
+- Results include hits, successful double notes and best combo. Local score/play count uses the existing per-game store; online ranking keeps the per-game best score while production ads remain disconnected.
 
 ## Line Surf v1
 
@@ -79,7 +79,7 @@ Exact numbers below are initial playable tuning, not a claim that the user fixed
 
 Only banners, no interstitial/rewarded ads, play limits, payments or account screens. Fixed banner strip separated from controls and system insets. Official test IDs in debug. Release ads disabled pending owner configuration and release prerequisites.
 
-Local best scores, online ranking placeholder that explicitly says preparing; no fake entries. API contract is a proposal awaiting the owner's server. App reinstall clears data; Android backup disabled to avoid promising identity transfer.
+Local best scores and online ranking use the same stable game IDs. The shared Worker stores one best entry for each installation player ID, game and `normal` mode, with `points` as the score unit. Rankings show the top 100, the current player and nearby entries. Failed best-score uploads and deletion requests remain pending locally and retry after reconnection. App reinstall clears identity and data; Android backup is disabled to avoid promising identity transfer.
 
 ## Integration and lifecycle v1
 
@@ -87,10 +87,10 @@ Local best scores, online ranking placeholder that explicitly says preparing; no
 - Orientation/screen-size changes keep the current Activity and engine, cancel any held pointer, pause the round and require an explicit resume tap. The adaptive test banner is destroyed and loaded again for the new dimensions.
 - Process/Activity recreation does not pretend to restore an in-memory engine. An active run is deliberately abandoned without saving a partial score, the user is told why, and a same-game restart is offered. Home, rankings and settings destinations restore safely; a previously committed result opens local records.
 - Installation ID creation, terminal game results and record deletion are synchronously committed. Nickname and vibration preferences remain non-critical asynchronous settings writes.
-- CI checks all six rules engines, six-game unlock state, width/height board fitting, test-only banner policy, no interstitial/rewarded ad classes, disabled release ads, disconnected empty ranking and local-record durability markers before Android lint/APK assembly.
+- CI checks all six rules engines, six-game unlock state, width/height board fitting, test-only banner policy, no interstitial/rewarded ad classes, disabled release ads, live ranking contract/retry markers and local-record durability before Android lint/APK assembly.
 
 ## Next development boundaries
 
 Implement one game per stage using the same shared shell. UI artwork is code-native. Original image is a concept reference, not a requirement to rasterize its mock phone UI into the app.
 
-No server provisioning, production ad deployment or store submission is part of this client milestone. Physical touch/game feel, installed-APK safe areas, device rotation and actual test-ad rendering still require device QA.
+The shared Cloudflare Worker/D1 is provisioned and accepts all six stable game IDs. Production ad deployment and store submission are outside this client milestone. Physical touch/game feel, installed-APK safe areas, device rotation, ranking UI and actual test-ad rendering still require device QA.

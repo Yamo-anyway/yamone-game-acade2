@@ -1,34 +1,54 @@
 package com.yamone.arcade2.data;
 
 import com.yamone.arcade2.core.GameId;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/** Transport boundary only. Never submits until an agreed server implementation replaces Disabled. */
-public interface RankingGateway {
-    enum Status { NOT_CONNECTED, SUCCESS, RETRYABLE_ERROR, REJECTED }
-    final class ScoreSubmission {
-        public final String runId, playerId, nickname, rulesVersion = "1", modeId = "60s";
-        public final GameId game;
-        public final int score;
-        public final long durationMs, seed;
-        public ScoreSubmission(String runId, String playerId, String nickname, GameId game,
-                               int score, long durationMs, long seed) {
-            this.runId = runId; this.playerId = playerId; this.nickname = nickname;
-            this.game = game; this.score = score; this.durationMs = durationMs; this.seed = seed;
+/** Android-independent data contract shared by the live ranking client and rule checks. */
+public final class RankingGateway {
+    public static final String MODE_ID = "normal";
+    public static final String SCORE_UNIT = "points";
+
+    public enum Status { SUCCESS, OFFLINE, SERVER_ERROR }
+
+    public static final class Entry {
+        public final int rank, score;
+        public final String nickname, countryCode;
+        public final boolean isMe;
+
+        public Entry(int rank, int score, String nickname, String countryCode, boolean isMe) {
+            this.rank = rank;
+            this.score = score;
+            this.nickname = nickname == null ? "" : nickname;
+            this.countryCode = countryCode == null ? "" : countryCode;
+            this.isMe = isMe;
         }
     }
-    final class Entry {
-        public final int rank, score;
-        public final String nickname;
-        public Entry(int rank, int score, String nickname) { this.rank = rank; this.score = score; this.nickname = nickname; }
+
+    public static final class Board {
+        public final GameId game;
+        public final int totalPlayers;
+        public final List<Entry> top, nearby;
+        public final Entry me;
+
+        public Board(GameId game, int totalPlayers, List<Entry> top, Entry me, List<Entry> nearby) {
+            this.game = game;
+            this.totalPlayers = Math.max(0, totalPlayers);
+            this.top = immutable(top);
+            this.me = me;
+            this.nearby = immutable(nearby);
+        }
+
+        private static List<Entry> immutable(List<Entry> source) {
+            if (source == null || source.isEmpty()) return Collections.emptyList();
+            return Collections.unmodifiableList(new ArrayList<>(source));
+        }
     }
-    Status status();
-    Status submit(ScoreSubmission score);
-    List<Entry> top(GameId game);
-    final class Disabled implements RankingGateway {
-        public Status status() { return Status.NOT_CONNECTED; }
-        public Status submit(ScoreSubmission score) { return Status.NOT_CONNECTED; }
-        public List<Entry> top(GameId game) { return Collections.emptyList(); }
+
+    public interface Callback {
+        void complete(Status status, Board board);
     }
+
+    private RankingGateway() {}
 }

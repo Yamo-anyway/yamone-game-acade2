@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.0 — 2026-09-28
+
+- Connect all six stable game IDs to the existing Yamone Games Cloudflare Worker and shared D1 leaderboard using `normal` mode and `points` units.
+- Queue existing local bests once during migration, then submit new local best scores with the app-local installation ID, nickname and device country; keep failed uploads durably queued for reconnection.
+- Add separate game selectors, online TOP 100, total participants, current-player rank, nearby rows, country flags and explicit offline/error/empty states.
+- Keep integrated and standalone app identities separate while preserving the same game IDs across future packaging changes.
+- Synchronize nickname changes and make local/online record deletion durable and retryable without exposing Worker or D1 secrets to the app.
+- Retain 115 game-engine checks and expand executable integration-policy coverage to 22 checks for the live endpoint, shared mode/unit, upload retry, deletion retry and online UI.
+
 ## 0.7.0 — 2026-09-25
 
 - Integrate all six games with one orientation/process-recreation policy: rotations retain and pause the live engine; process recreation explicitly abandons unsaved partial runs and offers a restart.

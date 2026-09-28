@@ -27,6 +27,33 @@ public final class LocalStore {
             .putInt("plays_" + game.key, previousPlays + 1).commit();
         return record;
     }
+
+    public synchronized void queueRanking(GameId game, int score) {
+        int safeScore = Math.max(0, score);
+        if (safeScore <= prefs.getInt("ranking_pending_" + game.key, -1)) return;
+        prefs.edit().putInt("ranking_pending_" + game.key, safeScore).commit();
+    }
+
+    public synchronized int pendingRanking(GameId game) {
+        return prefs.getInt("ranking_pending_" + game.key, -1);
+    }
+
+    public synchronized void clearPendingRanking(GameId game, int submittedScore) {
+        String key = "ranking_pending_" + game.key;
+        if (prefs.getInt(key, -1) <= submittedScore) prefs.edit().remove(key).commit();
+    }
+
+    public synchronized void requestOnlineDelete() {
+        SharedPreferences.Editor edit = prefs.edit().putBoolean("ranking_delete_pending", true);
+        for (GameId game : GameId.values()) edit.remove("ranking_pending_" + game.key);
+        edit.commit();
+    }
+
+    public boolean onlineDeletePending() { return prefs.getBoolean("ranking_delete_pending", false); }
+    public void onlineDeleteCompleted() { prefs.edit().remove("ranking_delete_pending").commit(); }
+    public boolean rankingInitialized() { return prefs.getBoolean("ranking_initialized", false); }
+    public void rankingInitialized() { prefs.edit().putBoolean("ranking_initialized", true).commit(); }
+
     public void clearScores() {
         SharedPreferences.Editor edit = prefs.edit();
         for (GameId game : GameId.values()) edit.remove("best_" + game.key).remove("plays_" + game.key);

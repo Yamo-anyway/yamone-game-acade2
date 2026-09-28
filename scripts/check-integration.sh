@@ -26,8 +26,18 @@ check_fixed app/src/main/java/com/yamone/arcade2/MainActivity.java 'STATE_ACTIVE
   'process recreation detects abandoned active run'
 check_fixed app/src/main/java/com/yamone/arcade2/data/LocalStore.java '.putInt("plays_" + game.key, previousPlays + 1).commit()' \
   'terminal result is committed synchronously'
-check_fixed app/src/main/java/com/yamone/arcade2/data/RankingGateway.java 'return Collections.emptyList();' \
-  'disconnected ranking returns no fake entries'
+check_fixed app/src/main/java/com/yamone/arcade2/data/OnlineRankingRepository.java \
+  'https://yamone-games-ranking-api.yamone-game.workers.dev' 'shared Cloudflare ranking endpoint configured'
+check_fixed app/src/main/java/com/yamone/arcade2/data/RankingGateway.java \
+  'public static final String MODE_ID = "normal";' 'ranking uses shared normal mode'
+check_fixed app/src/main/java/com/yamone/arcade2/data/RankingGateway.java \
+  'public static final String SCORE_UNIT = "points";' 'ranking sends verified points unit'
+check_fixed app/src/main/java/com/yamone/arcade2/data/LocalStore.java \
+  'ranking_delete_pending' 'offline online-record deletion is durable'
+check_fixed app/src/main/java/com/yamone/arcade2/data/OnlineRankingRepository.java \
+  'store.clearPendingRanking(game, score);' 'successful score upload clears durable pending value'
+check_fixed app/src/main/java/com/yamone/arcade2/MainActivity.java \
+  'renderOnlineRanking' 'game-specific online leaderboard UI connected'
 
 views=(OrbitView ColorBreakView TwinTapView LineSurfView PocketPulseView StackSliceView)
 for view in "${views[@]}"; do

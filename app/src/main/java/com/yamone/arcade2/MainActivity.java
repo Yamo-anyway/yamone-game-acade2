@@ -29,6 +29,7 @@ import com.yamone.arcade2.core.LineSurfEngine;
 import com.yamone.arcade2.core.PocketPulseEngine;
 import com.yamone.arcade2.core.StackSliceEngine;
 import com.yamone.arcade2.data.LocalStore;
+import com.yamone.arcade2.data.OnlineRankingRepository;
 import com.yamone.arcade2.data.RankingGateway;
 import com.yamone.arcade2.ui.BannerSlot;
 import com.yamone.arcade2.ui.OrbitView;
@@ -49,11 +50,14 @@ public final class MainActivity extends Activity {
     private BannerSlot banner;
     private GameView gameView;
     private GameId activeGame = GameId.ORBIT_SNAP;
+    private GameId rankingGame = GameId.ORBIT_SNAP;
     private String screen = "home", runId;
-    private final RankingGateway ranking = new RankingGateway.Disabled();
+    private OnlineRankingRepository ranking;
 
     @Override public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState); store = new LocalStore(this);
+        super.onCreate(savedInstanceState);
+        store = new LocalStore(this);
+        ranking = new OnlineRankingRepository(this, store);
         root = column(); root.setBackgroundColor(BG);
         root.setOnApplyWindowInsetsListener((v, insets) -> {
             if (Build.VERSION.SDK_INT >= 30) {
@@ -69,6 +73,7 @@ public final class MainActivity extends Activity {
         View separator = new View(this); separator.setBackgroundColor(BG); root.addView(separator, new LinearLayout.LayoutParams(-1, dp(12)));
         banner = new BannerSlot(this); root.addView(banner, new LinearLayout.LayoutParams(-1, -2));
         setContentView(root); root.requestApplyInsets(); restoreDestination(savedInstanceState);
+        ranking.initialize();
         if (Build.VERSION.SDK_INT >= 33) getOnBackInvokedDispatcher().registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::handleBack);
     }
     private void restoreDestination(Bundle state) {
@@ -181,6 +186,7 @@ public final class MainActivity extends Activity {
     private void result(String completedRun, GameId game, int score, boolean completed, String detail) {
         if (!"game".equals(screen) || gameView == null || !completedRun.equals(runId)) return;
         boolean record = store.saveResult(game, completedRun, score);
+        if (record) ranking.submitBest(game, store.best(game));
         LinearLayout p = page("result"); gap(p, 25);
         p.addView(text(record ? "NEW BEST!" : "NICE PLAY!", 14, MINT)); gap(p, 17);
         p.addView(text(completed ? "60초, 완주했어요." : "한 번 더 도전해볼까요?", 24, TEXT)); gap(p, 20);
@@ -189,20 +195,98 @@ public final class MainActivity extends Activity {
         p.addView(text("내 최고기록  " + store.best(game) + "점", 17, TEXT)); gap(p, 30);
         p.addView(button("한 판 더", MINT, BG, () -> startGame(game))); gap(p, 10);
         p.addView(button("게임 고르기", PANEL, TEXT, this::home)); gap(p, 22);
-        p.addView(text("기록이 이 기기에 저장됐어요.\n온라인 랭킹은 준비 중입니다.", 12, MUTED));
+        p.addView(text(record
+            ? "새 최고기록이 저장됐어요. 인터넷 연결 시 온라인 랭킹에도 반영됩니다."
+            : "기기와 온라인 랭킹에는 게임별 최고기록 한 개만 유지됩니다.", 12, MUTED));
     }
     private void rankings() {
-        LinearLayout p = page("rankings"); p.addView(text("나의 기록", 28, TEXT)); gap(p, 8);
-        p.addView(text(store.nickname() + "님의 최고 점수", 13, MUTED)); gap(p, 24);
-        for (GameId game : GameId.values()) {
-            LinearLayout line = column(); line.setBackground(shape(PANEL, 16)); line.setPadding(dp(17), dp(17), dp(17), dp(17));
-            line.addView(text(game.title, 16, game.color)); gap(line, 8);
-            line.addView(text(store.plays(game) == 0 ? "아직 기록이 없어요" : store.best(game) + "점", 21, TEXT));
-            p.addView(line); gap(p, 10);
+        rankings(rankingGame);
+    }
+    private void rankings(GameId selected) {
+        rankingGame = selected;
+        LinearLayout p = page("rankings");
+        p.addView(text("게임별 랭킹", 28, TEXT)); gap(p, 8);
+        p.addView(text("같은 게임·같은 모드의 최고기록으로 순위를 정해요.", 13, MUTED)); gap(p, 18);
+        GameId[] games = GameId.values();
+        for (int index = 0; index < games.length; index += 2) {
+            LinearLayout choices = row();
+            for (int column = 0; column < 2; column++) {
+                int item = index + column;
+                if (item >= games.length) {
+                    choices.addView(new View(this), new LinearLayout.LayoutParams(0, dp(48), 1));
+                    continue;
+                }
+                GameId game = games[item];
+                Button option = button(game.title, game == selected ? game.color : PANEL,
+                    game == selected ? BG : TEXT, () -> rankings(game));
+                option.setTextSize(11);
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(48), 1);
+                params.setMargins(column == 0 ? 0 : dp(4), dp(3), column == 0 ? dp(4) : 0, dp(3));
+                choices.addView(option, params);
+            }
+            p.addView(choices);
         }
-        gap(p, 10); p.addView(text("온라인 랭킹", 19, TEXT)); gap(p, 8);
-        if (ranking.status() == RankingGateway.Status.NOT_CONNECTED)
-            p.addView(text("준비 중입니다. 지금은 내 기기의 최고기록을 볼 수 있어요.", 13, MUTED));
+        gap(p, 18);
+        LinearLayout local = column(); local.setBackground(shape(PANEL, 16)); local.setPadding(dp(17), dp(17), dp(17), dp(17));
+        local.addView(text(selected.title + " · 내 기기 최고기록", 14, selected.color)); gap(local, 8);
+        local.addView(text(store.plays(selected) == 0 ? "아직 기록이 없어요" : store.best(selected) + "점", 24, TEXT));
+        p.addView(local); gap(p, 20);
+        LinearLayout online = column();
+        online.addView(text("온라인 순위를 불러오는 중…", 14, MUTED));
+        p.addView(online);
+        ranking.load(selected, (status, board) -> {
+            if (!"rankings".equals(screen) || rankingGame != selected) return;
+            renderOnlineRanking(online, status, board);
+        });
+    }
+    private void renderOnlineRanking(LinearLayout target, RankingGateway.Status status, RankingGateway.Board board) {
+        target.removeAllViews();
+        if (status == RankingGateway.Status.OFFLINE) {
+            target.addView(text("인터넷에 연결되면 온라인 순위를 볼 수 있어요.", 14, MUTED));
+            return;
+        }
+        if (status != RankingGateway.Status.SUCCESS || board == null) {
+            target.addView(text("온라인 순위를 불러오지 못했어요.", 14, 0xFFFF84AF)); gap(target, 10);
+            target.addView(button("다시 시도", PANEL, TEXT, () -> rankings(rankingGame)));
+            return;
+        }
+        target.addView(text("온라인 TOP 100", 20, TEXT)); gap(target, 5);
+        target.addView(text("참여자 " + board.totalPlayers + "명", 12, MUTED)); gap(target, 13);
+        if (board.me != null) {
+            LinearLayout mine = rankingRow(board.me, true);
+            mine.setBackground(shape(0xFF183039, 14));
+            target.addView(mine); gap(target, 14);
+        }
+        if (board.top.isEmpty()) {
+            target.addView(text("아직 등록된 기록이 없어요. 첫 순위에 도전해보세요.", 14, MUTED));
+            return;
+        }
+        for (RankingGateway.Entry entry : board.top) {
+            target.addView(rankingRow(entry, entry.isMe)); gap(target, 5);
+        }
+        if (board.me != null && board.me.rank > board.top.size() && !board.nearby.isEmpty()) {
+            gap(target, 15); target.addView(text("내 순위 주변", 17, TEXT)); gap(target, 8);
+            for (RankingGateway.Entry entry : board.nearby) {
+                target.addView(rankingRow(entry, entry.isMe)); gap(target, 5);
+            }
+        }
+    }
+    private LinearLayout rankingRow(RankingGateway.Entry entry, boolean highlight) {
+        LinearLayout line = row(); line.setPadding(dp(13), dp(12), dp(13), dp(12));
+        line.setBackground(shape(highlight ? 0xFF183039 : PANEL, 12));
+        TextView place = text("#" + entry.rank, 14, highlight ? MINT : MUTED);
+        line.addView(place, new LinearLayout.LayoutParams(dp(48), -2));
+        String identity = countryFlag(entry.countryCode) + entry.nickname;
+        line.addView(text(identity, 14, TEXT), new LinearLayout.LayoutParams(0, -2, 1));
+        line.addView(text(entry.score + "점", 15, highlight ? MINT : TEXT));
+        return line;
+    }
+    private String countryFlag(String countryCode) {
+        String code = countryCode == null ? "" : countryCode.trim().toUpperCase(java.util.Locale.US);
+        if (!code.matches("^[A-Z]{2}$")) return "";
+        int first = 0x1F1E6 + code.charAt(0) - 'A';
+        int second = 0x1F1E6 + code.charAt(1) - 'A';
+        return new String(Character.toChars(first)) + new String(Character.toChars(second)) + "  ";
     }
     private void settings() {
         LinearLayout p = page("settings"); p.addView(text("내 플레이 설정", 28, TEXT)); gap(p, 26);
@@ -212,14 +296,18 @@ public final class MainActivity extends Activity {
         p.addView(button("닉네임 저장", PANEL, TEXT, () -> {
             String value = name.getText().toString().trim();
             if (value.isEmpty()) { name.setError("닉네임을 입력해주세요"); return; }
-            store.nickname(value); android.widget.Toast.makeText(this, "저장했어요", android.widget.Toast.LENGTH_SHORT).show();
+            store.nickname(value); ranking.nicknameChanged();
+            android.widget.Toast.makeText(this, "닉네임과 랭킹 정보를 갱신했어요", android.widget.Toast.LENGTH_SHORT).show();
         })); gap(p, 24);
         Switch vibration = new Switch(this); vibration.setText("터치 진동"); vibration.setTextColor(TEXT); vibration.setChecked(store.haptics()); vibration.setMinimumHeight(dp(48));
         vibration.setOnCheckedChangeListener((v, enabled) -> store.haptics(enabled)); p.addView(vibration); gap(p, 25);
-        p.addView(text("회원가입 없이 바로 플레이해요.\n기록은 이 기기에 저장됩니다. 앱 삭제 시 기록도 사라집니다.", 13, MUTED)); gap(p, 20);
+        p.addView(text("회원가입 없이 바로 플레이해요.\n설치별 ID·닉네임·국가 코드와 게임별 최고점수만 온라인 랭킹에 사용합니다.", 13, MUTED)); gap(p, 20);
         p.addView(button("내 기록 초기화", PANEL, 0xFFFF84AF, () -> new AlertDialog.Builder(this)
-            .setTitle("최고기록을 지울까요?").setMessage("6개 게임의 기기 내 점수와 플레이 횟수가 삭제됩니다. 되돌릴 수 없어요.")
-            .setPositiveButton("삭제", (d, w) -> { store.clearScores(); settings(); }).setNegativeButton("취소", null).show()));
+            .setTitle("모든 기록을 지울까요?").setMessage("6개 게임의 기기 기록과 이 앱의 온라인 랭킹 기록을 삭제합니다. 오프라인이면 연결될 때 서버 삭제를 완료합니다.")
+            .setPositiveButton("삭제", (d, w) -> {
+                ranking.deleteAllOnline(); store.clearScores(); settings();
+                android.widget.Toast.makeText(this, "기록 삭제 요청을 저장했어요", android.widget.Toast.LENGTH_SHORT).show();
+            }).setNegativeButton("취소", null).show()));
         gap(p, 30); p.addView(text("YAMONE ARCADE 2  ·  v" + BuildConfig.VERSION_NAME, 11, MUTED));
     }
     private LinearLayout column() { LinearLayout l = new LinearLayout(this); l.setOrientation(LinearLayout.VERTICAL); return l; }
@@ -244,6 +332,15 @@ public final class MainActivity extends Activity {
         if (banner != null) banner.reloadForConfiguration();
     }
     @Override protected void onPause() { if (gameView != null) gameView.setForeground(false); if (banner != null) banner.pause(); super.onPause(); }
-    @Override protected void onResume() { super.onResume(); if (gameView != null) gameView.setForeground(true); if (banner != null) banner.resume(); }
-    @Override protected void onDestroy() { if (banner != null) banner.dispose(); super.onDestroy(); }
+    @Override protected void onResume() {
+        super.onResume();
+        if (gameView != null) gameView.setForeground(true);
+        if (banner != null) banner.resume();
+        if (ranking != null) ranking.syncPending();
+    }
+    @Override protected void onDestroy() {
+        if (banner != null) banner.dispose();
+        if (ranking != null) ranking.close();
+        super.onDestroy();
+    }
 }

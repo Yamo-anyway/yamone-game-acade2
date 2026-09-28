@@ -49,9 +49,9 @@ public final class CoreTests {
         check(Math.abs(a.angle() - b.angle()) < .02 && Math.abs(a.elapsed() - b.elapsed()) < .0001, "frame rate independent motion");
         at = a.elapsed(); a.advance(Double.NaN); a.advance(Double.POSITIVE_INFINITY); a.advance(-1);
         check(a.elapsed() == at, "invalid deltas ignored");
-        RankingGateway disabled = new RankingGateway.Disabled();
-        check(disabled.status() == RankingGateway.Status.NOT_CONNECTED && disabled.top(GameId.ORBIT_SNAP).isEmpty(), "unconnected ranking shows no fake entries");
-        check(disabled.submit(new RankingGateway.ScoreSubmission("run", "local", "player", GameId.ORBIT_SNAP, 1, 100, 77)) == RankingGateway.Status.NOT_CONNECTED, "server submission disabled");
+        RankingGateway.Board emptyBoard = new RankingGateway.Board(GameId.ORBIT_SNAP, -1, null, null, null);
+        check(emptyBoard.totalPlayers == 0 && emptyBoard.top.isEmpty() && emptyBoard.nearby.isEmpty(), "empty ranking contract shows no fake entries");
+        check("normal".equals(RankingGateway.MODE_ID) && "points".equals(RankingGateway.SCORE_UNIT), "ranking contract matches shared worker mode and unit");
         check(GameId.values().length == 6, "catalog contains all six approved concepts");
         colorBreakTests();
         twinTapTests();

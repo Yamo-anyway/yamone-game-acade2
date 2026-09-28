@@ -2,7 +2,7 @@
 
 6가지 1분 아케이드 게임을 모은 **Android 네이티브 앱**입니다. 웹사이트나 WebView 게임이 아닙니다.
 
-현재 버전: **0.7.0 — 6개 게임 통합 안정화**
+현재 버전: **0.8.0 — Cloudflare 온라인 랭킹 연결**
 
 ## 현재 구현
 
@@ -18,7 +18,9 @@
 - Android Canvas 애니메이션, 기기 진동 옵션
 - 하단 공식 AdMob 테스트 배너(debug만). 게임 영역·하단 시스템 영역과 분리
 - 화면 구성 변경 시 적응형 테스트 배너 크기 재계산, pause/resume/destroy 수명주기 전달
-- 랭킹 DTO/인터페이스와 미연결 어댑터. 온라인 요청·가짜 순위 없음
+- 기존 Yamone Games Cloudflare Worker/D1에 게임별 최고기록 전송
+- 게임별 온라인 TOP 100, 내 순위, 내 주변 순위와 국가 표시
+- 오프라인 최고기록·삭제 요청의 로컬 보관 및 재연결 처리
 - GitHub Actions 엔진 검사 / lint / debug APK 빌드
 
 6개 게임이 모두 플레이 가능하며 통합·수명주기·화면비·오프라인 기록·배너 정책 검사를 CI에 포함합니다.
@@ -42,4 +44,4 @@ GitHub의 **Actions → Android → 성공한 실행 → yamone-arcade2-debug**�
 
 기술 확인 자료: [AGP 8.10 호환성](https://developer.android.com/build/releases/agp-8-10-0-release-notes), [AdMob Android SDK](https://developers.google.com/admob/android/quick-start), [테스트 광고 ID](https://developers.google.com/admob/android/test-ads), [적응형 배너](https://developers.google.com/admob/android/banner).
 
-실서비스 광고 ID와 랭킹 서버 정보가 없어도 현재 앱을 테스트할 수 있습니다. 운영 배너·서버·스토어 배포는 아직 연결하지 않았습니다. 화면 회전은 진행 중 엔진을 유지하고 일시정지하지만, 프로세스 종료 후에는 미완료 판을 저장하지 않고 재시작 안내를 표시합니다. 실기기 화면비·터치 감각·광고 실제 노출 확인은 별도 QA가 필요합니다.
+실서비스 광고 ID가 없어도 현재 앱을 테스트할 수 있습니다. 온라인 랭킹은 기존 Cloudflare Worker에 연결되어 있고 운영 배너·스토어 배포는 아직 연결하지 않았습니다. 화면 회전은 진행 중 엔진을 유지하고 일시정지하지만, 프로세스 종료 후에는 미완료 판을 저장하지 않고 재시작 안내를 표시합니다. 실기기 화면비·터치 감각·랭킹 UI·광고 실제 노출 확인은 별도 QA가 필요합니다.
