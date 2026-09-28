@@ -12,7 +12,7 @@ Current stage: **M09 / v0.9.0**. Repository is the source of truth for subsequen
 | M06 | Stack Slice | complete; 115 core checks, Android lint and debug APK passed |
 | M07 | Integration, lifecycle/aspect ratios, debug APK QA | complete; 115 core + 17 integration checks, Android lint and debug APK passed |
 | M08 | Shared Cloudflare game-by-game online ranking | complete; 115 core + 22 integration checks and Android CI passed |
-| M09 | Play analytics, remote catalog, ranking reset and admin dashboard | implemented locally; Cloudflare deployment and Android CI pending |
+| M09 | Play analytics, remote catalog, ranking reset and admin dashboard | complete; production migration/deployment, live smoke test and Android CI passed |
 
 ## M09 implemented
 
@@ -30,10 +30,19 @@ prevents pre-reset queued scores or lifetime local bests from restoring a new
 ranking season. A full online-data delete also clears pending play receipts.
 
 Local validation: **115 core checks**, **29 integration checks**, repeatable
-SQLite migration/seed check, Worker/Admin JavaScript syntax and contract checks,
-and `git diff --check` passed. No production D1 migration, Worker deployment,
-remote admin login, Android CI, device install or live play-stat smoke test is
-claimed yet.
+SQLite migration/seed check, rendered Worker/Admin JavaScript syntax and
+contract checks, and `git diff --check` passed. GitHub Actions run
+**36366050759**, commit **034495742a8de58a227b17ed9f0df7bb700f0c65**,
+completed the same service checks, Android lint and debug APK assembly.
+
+Production D1 migration `0002_game_operations.sql` was applied without
+removing the existing three leaderboard rows. Worker version
+**8bb537a1-aebe-412e-a4df-9023f204005b** was deployed after fixing and testing
+the rendered admin dashboard script. Live smoke testing verified idempotent
+start receipt handling, finish completion, score/ranking update, country/game
+statistics, authenticated admin login and complete deletion of the temporary
+test player's ranking and play data. Device installation and physical gameplay
+QA are not claimed.
 
 ## M01 implemented
 
