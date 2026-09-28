@@ -1,6 +1,6 @@
 # Development progress
 
-Current stage: **M10 / v0.10.0**. Repository is the source of truth for subsequent work.
+Current stage: **M11 / v0.11.0**. Repository is the source of truth for subsequent work.
 
 | Milestone | Scope | State |
 |---|---|---|
@@ -14,6 +14,30 @@ Current stage: **M10 / v0.10.0**. Repository is the source of truth for subseque
 | M08 | Shared Cloudflare game-by-game online ranking | complete; 115 core + 22 integration checks and Android CI passed |
 | M09 | Play analytics, remote catalog, ranking reset and admin dashboard | complete; production migration/deployment, live smoke test and Android CI passed |
 | M10 | Pastel home, rankings and settings redesign | complete; Android lint/APK, native emulator UI and visual review passed |
+| M11 | Four-lane endless pastel Color Break | implemented; Android build and native play-screen QA pending |
+
+## M11 implementation
+
+2026-09-28: Rebuilt Color Break as four shuffled color lanes with redundant shapes,
+five misses, continuous acceleration and no time cutoff. The full-height pastel
+board has top score/lives and four colored pads. Game cards open the board directly;
+pause, background recovery and results use custom pastel sheets with explicit actions.
+Other games retain their rules. Game ID, mode, points, installation identity,
+per-game records and idempotent play receipts are preserved.
+
+127 engine checks, 29 integration checks and operations migration checks pass.
+New rule coverage includes 1,200 correct walls beyond ten minutes and 100,000 points,
+four-way shuffle/target uniqueness, late selection, all five misses, input/recovery,
+pause, two refresh rates, huge frame deltas and safe score saturation.
+Offline emulator coverage now exercises all four actual pad locations, pause/resume,
+custom result/retry and exactly-once local score/play-count storage.
+
+Added additive migration `0003_color_break_endless.sql` to lift only this game's
+server score ceiling to 1,000,000,000. It retains existing leaderboard rows and epochs.
+This workspace has no Cloudflare deployment connection; production migration is
+pending owner execution. Scores above 100,000 cannot upload until it is applied;
+the client retains them locally and in its retry queue. No test data was sent online.
+Exact-commit Android CI and screenshot review pending.
 
 ## M10 implementation
 

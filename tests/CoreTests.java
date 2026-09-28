@@ -60,58 +60,97 @@ public final class CoreTests {
         stackSliceTests();
         System.out.println("All " + passed + " core checks passed.");
     }
-    private static int matchingLane(ColorBreakEngine e) { return e.laneColor(0) == e.targetColor() ? 0 : 1; }
+    private static int matchingLane(ColorBreakEngine e) {
+        for (int i = 0; i < 4; i++) if (e.laneColor(i) == e.targetColor()) return i;
+        throw new AssertionError("No matching color");
+    }
     private static void colorHit(ColorBreakEngine e) {
         e.tapLane(matchingLane(e));
         e.advance(e.wallDuration() * (1 - e.wallProgress()));
     }
     private static void colorBreakTests() {
         ColorBreakEngine e = new ColorBreakEngine(77);
-        e.advance(10); e.tapLane(-1); e.tapLane(2);
-        check(e.state() == ColorBreakEngine.State.READY && e.elapsed() == 0, "color waits for valid first lane tap");
-        check(e.laneColor(0) != e.laneColor(1) && (e.laneColor(0) == e.targetColor() || e.laneColor(1) == e.targetColor()), "color wall has exactly one matching lane");
-        e.tapLane(1 - matchingLane(e)); e.advance(e.wallDuration() - .001);
-        check(e.score() == 0 && e.lives() == 3, "color only judges at crossing");
+        e.advance(10); e.tapLane(-1); e.tapLane(4);
+        check(e.state() == ColorBreakEngine.State.READY && e.elapsed() == 0, "color waits for a valid pad tap");
+        int mask = 0; for (int i = 0; i < 4; i++) mask |= 1 << e.laneColor(i);
+        check(mask == 15 && e.lives() == 5, "color starts with four distinct colors and five lives");
+        e.tapLane((matchingLane(e) + 1) % 4); e.advance(e.wallDuration() - .001);
+        check(e.score() == 0 && e.lives() == 5, "color only judges at crossing");
         e.tapLane(matchingLane(e)); e.advance(.001);
         check(e.score() == 100 && e.combo() == 1 && e.passed() == 1, "color last moment lane change scores once");
-        e.tapLane(0); e.tapLane(1); e.advance(.1);
-        check(e.score() == 100 && e.feedbackId() == 1, "color repeated taps and recovery cannot duplicate score");
-        e.advance(ColorBreakEngine.RECOVERY - .1); colorHit(e);
+        int selected = e.lane();
+        e.tapLane((selected + 1) % 4); e.advance(ColorBreakEngine.RECOVERY / 2);
+        check(e.score() == 100 && e.feedbackId() == 1 && e.lane() == selected, "color feedback interval rejects new input and duplicate score");
+        e.advance(ColorBreakEngine.RECOVERY / 2); colorHit(e);
         check(e.score() == 210 && e.combo() == 2 && e.bestCombo() == 2, "color consecutive hit earns combo bonus");
-        e.advance(ColorBreakEngine.RECOVERY); e.tapLane(1 - matchingLane(e)); e.advance(e.wallDuration());
-        check(e.combo() == 0 && e.bestCombo() == 2 && e.score() == 210 && e.lives() == 2, "color mismatch resets combo but keeps best and score");
+        e.advance(ColorBreakEngine.RECOVERY); e.tapLane((matchingLane(e) + 1) % 4); e.advance(e.wallDuration());
+        check(e.combo() == 0 && e.bestCombo() == 2 && e.score() == 210 && e.lives() == 4, "color one mismatch costs exactly one life and resets combo");
         double at = e.elapsed(), recovery = e.recoveryRemaining(); int lane = e.lane();
-        e.pause(); e.pause(); e.advance(99); e.tapLane(1 - lane);
-        check(e.elapsed() == at && e.recoveryRemaining() == recovery && e.lane() == lane, "color pause freezes recovery timer and input");
+        e.pause(); e.pause(); e.advance(99); e.tapLane((lane + 1) % 4);
+        check(e.elapsed() == at && e.recoveryRemaining() == recovery && e.lane() == lane, "color pause freezes recovery and input");
         e.resume(); e.advance(ColorBreakEngine.RECOVERY); colorHit(e);
         check(e.combo() == 1 && e.score() == 310, "color resume and post-miss hit restart combo");
         ColorBreakEngine ready = new ColorBreakEngine(1); ready.pause(); ready.resume(); ready.advance(9);
-        check(ready.state() == ColorBreakEngine.State.READY && ready.elapsed() == 0, "color pause before start preserves ready state");
+        check(ready.state() == ColorBreakEngine.State.READY && ready.elapsed() == 0, "color pause before first input preserves ready state");
         ColorBreakEngine failed = new ColorBreakEngine(2);
-        for (int i = 0; i < 3; i++) {
-            failed.tapLane(1 - matchingLane(failed)); failed.advance(failed.wallDuration());
-            if (i < 2) failed.advance(ColorBreakEngine.RECOVERY);
+        for (int i = 0; i < 5; i++) {
+            failed.tapLane((matchingLane(failed) + 1) % 4); failed.advance(failed.wallDuration());
+            if (i < 4) {
+                check(failed.state() == ColorBreakEngine.State.RUNNING && failed.lives() == 4-i, "color survives miss " + (i+1));
+                failed.advance(ColorBreakEngine.RECOVERY);
+            }
         }
-        check(failed.state() == ColorBreakEngine.State.FINISHED && failed.lives() == 0 && failed.score() == 0, "color three mismatches finish round");
+        check(failed.state() == ColorBreakEngine.State.FINISHED && failed.lives() == 0 && failed.score() == 0, "color exactly five misses end a run");
         at = failed.elapsed(); failed.tapLane(matchingLane(failed)); failed.advance(1000); failed.pause(); failed.resume();
         check(failed.elapsed() == at && failed.score() == 0 && failed.state() == ColorBreakEngine.State.FINISHED, "color finished state rejects input and time");
-        ColorBreakEngine clock = new ColorBreakEngine(4);
-        int expectedScore = 0;
-        while (clock.state() != ColorBreakEngine.State.FINISHED) {
-            int before = clock.passed(); colorHit(clock);
-            if (clock.passed() > before) expectedScore += 100 + Math.min(10, clock.combo() - 1) * 10;
-            clock.advance(ColorBreakEngine.RECOVERY);
+        ColorBreakEngine clock = new ColorBreakEngine(4), sameSeed = new ColorBreakEngine(4);
+        int expectedScore = 0, laneCoverage = 0; boolean shuffled = true, unique = true, faster = true, deterministic = true;
+        double previousDuration = clock.wallDuration();
+        for (int round = 0; round < 1200; round++) {
+            int[] before = new int[4]; int oldTarget = clock.targetColor();
+            mask = 0;
+            for (int i = 0; i < 4; i++) {
+                before[i] = clock.laneColor(i); mask |= 1 << before[i];
+                deterministic &= before[i] == sameSeed.laneColor(i);
+            }
+            deterministic &= clock.targetColor() == sameSeed.targetColor();
+            unique &= mask == 15; laneCoverage |= 1 << matchingLane(clock);
+            colorHit(clock); colorHit(sameSeed);
+            expectedScore += 100 + Math.min(10, clock.combo() - 1) * 10;
+            clock.advance(ColorBreakEngine.RECOVERY); sameSeed.advance(ColorBreakEngine.RECOVERY);
+            boolean changed = false; for (int i = 0; i < 4; i++) changed |= before[i] != clock.laneColor(i);
+            shuffled &= changed && oldTarget != clock.targetColor();
+            faster &= clock.wallDuration() < previousDuration && clock.wallDuration() > .35;
+            previousDuration = clock.wallDuration();
         }
-        check(clock.elapsed() == 60 && clock.lives() == 3 && clock.combo() > 11 && clock.score() == expectedScore, "color exact 60 seconds and capped combo bonus");
-        check(clock.wallDuration() < 2.4 && clock.wallDuration() >= 1.1, "color walls accelerate within reaction-time bound");
+        check(clock.state() == ColorBreakEngine.State.RUNNING && clock.elapsed() > 600 && clock.lives() == 5, "color perfect play remains alive past ten minutes without a timer");
+        check(clock.score() == expectedScore && clock.score() > 100000, "color endless score crosses the old server limit without truncation");
+        check(faster && clock.level() > 100, "color difficulty keeps increasing beyond the initial minute");
+        check(shuffled && unique && laneCoverage == 15, "color each row reshuffles all four colors with one target across every lane");
+        check(deterministic, "color same seed yields reproducible color and target sequences");
+        ColorBreakEngine unattended = new ColorBreakEngine(9); colorHit(unattended); unattended.advance(1000);
+        check(unattended.passed() == 1 && unattended.lives() == 0, "color holding a lane never farms passive hits");
+        ColorBreakEngine paused = new ColorBreakEngine(8); paused.tapLane(3); paused.advance(.45); paused.pause();
+        at = paused.elapsed(); double progress = paused.wallProgress(); paused.advance(100); paused.tapLane(0);
+        check(paused.elapsed() == at && paused.wallProgress() == progress && paused.lane() == 3, "color pause freezes an in-flight wall and chosen pad");
+        paused.resume(); paused.tapLane(matchingLane(paused)); paused.advance(paused.wallDuration() * (1-paused.wallProgress()));
+        check(paused.score() == 100, "color paused wall can finish correctly after resume");
         ColorBreakEngine a = new ColorBreakEngine(123), b = new ColorBreakEngine(123);
         a.tapLane(0); b.tapLane(0);
         for (int i = 0; i < 720; i++) a.advance(1.0 / 60);
         for (int i = 0; i < 1440; i++) b.advance(1.0 / 120);
         check(a.score() == b.score() && a.lives() == b.lives() && a.feedbackId() == b.feedbackId()
-            && Math.abs(a.elapsed() - b.elapsed()) < 1e-8 && Math.abs(a.wallProgress() - b.wallProgress()) < 1e-8, "color 60Hz and 120Hz event consistency");
+            && Math.abs(a.elapsed() - b.elapsed()) < 1e-8 && Math.abs(a.wallProgress() - b.wallProgress()) < 1e-8, "color 60Hz and 120Hz outcomes match");
         ColorBreakEngine large = new ColorBreakEngine(123); large.tapLane(0); large.advance(12);
-        check(large.score() == a.score() && large.lives() == a.lives() && large.feedbackId() == a.feedbackId(), "color delayed frame cannot skip wall collision");
+        check(large.score() == a.score() && large.lives() == a.lives() && large.feedbackId() == a.feedbackId(), "color delayed frame cannot skip a collision");
+        ColorBreakEngine huge = new ColorBreakEngine(2); huge.tapLane(matchingLane(huge)); huge.advance(Double.MAX_VALUE);
+        check(huge.lives() == 0 && huge.passed() == 1 && Double.isFinite(huge.elapsed()), "color huge finite delay terminates without overflow or looping");
+        try {
+            ColorBreakEngine limit = new ColorBreakEngine(11);
+            java.lang.reflect.Field score = ColorBreakEngine.class.getDeclaredField("score"); score.setAccessible(true);
+            score.setInt(limit, ColorBreakEngine.MAX_SCORE - 20); colorHit(limit);
+            check(limit.score() == ColorBreakEngine.MAX_SCORE && limit.state() == ColorBreakEngine.State.RUNNING, "color integer score bound never ends the endless run");
+        } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
         at = ready.elapsed(); ready.tapLane(0); ready.advance(Double.NaN); ready.advance(Double.POSITIVE_INFINITY); ready.advance(-1); ready.advance(0);
         check(ready.elapsed() == at, "color invalid time deltas ignored");
         check(GameId.ORBIT_SNAP.ready && GameId.COLOR_BREAK.ready && GameId.TWIN_TAP.ready && GameId.LINE_SURF.ready

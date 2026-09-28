@@ -40,3 +40,17 @@ leaderboard and advances its epoch. Play receipts and aggregate history remain.
 
 The v0.9.0 client keeps play events offline if it temporarily reaches the older
 Worker, while the legacy best-score API continues retrying independently.
+# Color Break v0.11.0 score ceiling
+
+After pulling the latest main, apply the additive migration from this directory:
+
+```sh
+npx --yes wrangler@latest d1 migrations apply yamone-games-ranking --remote
+```
+
+`0003_color_break_endless.sql` raises only `color_break / normal` to 1,000,000,000
+points for endless runs. It does not reset rankings or player data, and no Worker
+redeploy is required for this data-only change. Existing admin max-score settings
+can also be used to raise the same row. Until applied, scores above 100,000 stay
+local/pending; the existing server rejects them. The old test leaderboard is not
+automatically reset—use the existing admin reset when the owner chooses to do so.

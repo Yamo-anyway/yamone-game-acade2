@@ -5,12 +5,17 @@ import android.app.Instrumentation;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.SystemClock;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import com.yamone.arcade2.core.GameId;
+import com.yamone.arcade2.core.ColorBreakEngine;
+import com.yamone.arcade2.data.LocalStore;
+import com.yamone.arcade2.ui.ColorBreakView;
 import com.yamone.arcade2.data.RankingGateway;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -51,12 +56,71 @@ public final class UiSmokeInstrumentation extends Instrumentation {
             capture("rankings-fixture");
             runOnMainSync(() -> scroll(activity.getWindow().getDecorView()).fullScroll(View.FOCUS_DOWN)); capture("rankings-list-fixture");
             navigate("홈"); requireText("오늘도, 가볍게 한 판 ✦");
-            result.putString("stream", "UI_SMOKE_OK: " + scenario + " " + widthDp + "dp, font " + fontScale + " home/settings/rankings offline/empty/populated/navigation\n");
+            colorBreak();
+            result.putString("stream", "UI_SMOKE_OK: " + scenario + " " + widthDp + "dp, font " + fontScale + " menus and four-lane endless play/pause/result/retry/input/records\n");
             finish(Activity.RESULT_OK, result);
         } catch (Throwable error) {
             result.putString("stream", "UI_SMOKE_FAILED: " + android.util.Log.getStackTraceString(error));
             finish(Activity.RESULT_CANCELED, result);
         }
+    }
+    private void colorBreak() throws Exception {
+        LocalStore local = new LocalStore(getTargetContext());
+        int previousPlays = local.plays(GameId.COLOR_BREAK);
+        String playerId = local.playerId();
+        navigate("컬러 브레이크");
+        ColorBreakView board = activity.getWindow().getDecorView().findViewWithTag("colorBreakBoard");
+        if (board == null) throw new AssertionError("Color Break should open directly without a start dialog");
+        java.lang.reflect.Field field = ColorBreakView.class.getDeclaredField("engine"); field.setAccessible(true);
+        ColorBreakEngine engine = (ColorBreakEngine)field.get(board);
+        if (engine.state() != ColorBreakEngine.State.READY) throw new AssertionError("Board must wait for pad input");
+        capture("color-ready");
+        runOnMainSync(() -> {
+            tap(board, board.getWidth()/2f, 20);
+            if (engine.state() != ColorBreakEngine.State.READY) throw new AssertionError("Score area must not start play");
+            for (int lane = 0; lane < 4; lane++) {
+                pad(board, lane);
+                if (engine.lane() != lane) throw new AssertionError("Pad mapping failed: " + lane);
+            }
+        });
+        navigate("일시정지"); requireText("잠깐, 숨 고르기");
+        double pausedAt = engine.elapsed(); capture("color-pause");
+        if (engine.elapsed() != pausedAt) throw new AssertionError("Pause panel did not freeze clock");
+        navigate("계속 플레이");
+        runOnMainSync(() -> {
+            for (int wall = 0; wall < 36; wall++) {
+                int match = 0; while (engine.laneColor(match) != engine.targetColor()) match++;
+                pad(board, match);
+                engine.advance(engine.wallDuration() * (1-engine.wallProgress())); engine.advance(ColorBreakEngine.RECOVERY);
+            }
+            if (engine.score() <= 0 || engine.passed() != 36) throw new AssertionError("Pad play did not award 36 walls");
+            pad(board, 2); engine.advance(engine.wallDuration() * .15); board.invalidate();
+        });
+        capture("color-playing");
+        runOnMainSync(() -> { engine.advance(1000); board.invalidate(); });
+        waitForIdleSync(); Thread.sleep(250); waitForIdleSync();
+        requireText("다섯 번의 미스, 여기까지 잘 달렸어요."); capture("color-result");
+        if (local.plays(GameId.COLOR_BREAK) != previousPlays + 1 || local.best(GameId.COLOR_BREAK) < engine.score())
+            throw new AssertionError("Terminal score/play count not saved exactly once");
+        if (!local.playerId().equals(playerId)) throw new AssertionError("Player identity changed");
+        navigate("한 판 더  →");
+        ColorBreakView fresh = activity.getWindow().getDecorView().findViewWithTag("colorBreakBoard");
+        ColorBreakEngine freshEngine = (ColorBreakEngine)field.get(fresh);
+        if (freshEngine.state() != ColorBreakEngine.State.READY || freshEngine.lives() != 5 || freshEngine.score() != 0)
+            throw new AssertionError("Retry must create a clean five-life game");
+        navigate("일시정지"); navigate("홈으로");
+        if (local.plays(GameId.COLOR_BREAK) != previousPlays + 1) throw new AssertionError("Abandoned retry saved a fake result");
+    }
+    private void pad(ColorBreakView board, int lane) {
+        float scale = Math.min(board.getWidth()/360f, board.getHeight()/480f);
+        float left = (board.getWidth()-360*scale)/2;
+        tap(board, left + (57+80*lane)*scale, board.getHeight()-58*scale);
+    }
+    private void tap(View view, float x, float y) {
+        long now = SystemClock.uptimeMillis();
+        MotionEvent down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, x, y, 0);
+        MotionEvent up = MotionEvent.obtain(now, now+1, MotionEvent.ACTION_UP, x, y, 0);
+        try { view.dispatchTouchEvent(down); view.dispatchTouchEvent(up); } finally { down.recycle(); up.recycle(); }
     }
     private void navigate(String label) {
         runOnMainSync(() -> {

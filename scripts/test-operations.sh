@@ -33,6 +33,14 @@ assert db.execute("SELECT ranking_epoch FROM game_catalog WHERE game_id='orbit_s
 db.execute("UPDATE game_catalog SET ranking_epoch=ranking_epoch+1, local_reset_epoch=local_reset_epoch+1 WHERE game_id='orbit_snap' AND mode_id='normal'")
 assert db.execute("SELECT ranking_epoch, local_reset_epoch FROM game_catalog WHERE game_id='orbit_snap' AND mode_id='normal'").fetchone() == (2, 1)
 print("PASS operations migration is repeatable and seeds 12 shared modes / 6 Arcade 2 games")
+db.execute("INSERT INTO leaderboard VALUES ('existing', 'color_break', 'normal', 'test', 'KR', 700, '1', '1')")
+endless = Path("cloudflare/migrations/0003_color_break_endless.sql").read_text()
+db.executescript(endless)
+db.executescript(endless)
+assert db.execute("SELECT max_score, ranking_epoch FROM game_catalog WHERE game_id='color_break' AND mode_id='normal'").fetchone() == (1000000000, 1)
+assert db.execute("SELECT max_score FROM game_catalog WHERE game_id='orbit_snap' AND mode_id='normal'").fetchone()[0] == 100000
+assert db.execute("SELECT best_score FROM leaderboard WHERE player_id='existing'").fetchone()[0] == 700
+print("PASS endless Color Break raises only its score ceiling, preserving records and epochs")
 PY
 
 node --input-type=module <<'JS'

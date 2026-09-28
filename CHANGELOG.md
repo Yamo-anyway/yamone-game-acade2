@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.0 — 2026-09-28
+
+- Rebuild Color Break with four randomly shuffled color/shape lanes, colored tap pads, five misses and endless survival instead of a 60-second timer.
+- Accelerate continuously, require a fresh selection per wall and preserve exact crossing/combo scoring through pauses and delayed frames.
+- Add a full-height pastel board, top score/lives, immediate entry without a start popup and custom pause/result sheets.
+- Preserve shared game IDs, app-local identity, ranking and play receipt behavior. Prepare a non-destructive D1 migration for scores above the former 100,000 ceiling.
+- Expand engine coverage to 127 checks and native emulator coverage to actual four-pad input, pause, result storage and retry.
+
 ## 0.10.0 — 2026-09-28
 
 - Redesign home, rankings, settings and result styling in a cream/lilac/peach palette with rounded cards, clear typography and selected icon navigation.

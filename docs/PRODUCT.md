@@ -2,12 +2,12 @@
 
 Source: user's 2026-09-24 six-concept image “초간단 아케이드 게임 아이디어 보드.png”, inspected directly. User asked for hourly app development in this exact repository.
 
-One Android app, six quick games. One or two fingers; approximately 60-second rounds; immediate retry. Native Java/Canvas/View implementation. No signup/login. Start without entering a nickname; optional nickname editing later. Local UUID identifies installation only, not authenticated server identity. No account recovery promise.
+One Android app, six quick games. One or two fingers; approximately 60-second rounds except the endless five-miss Color Break mode; immediate retry. Native Java/Canvas/View implementation. No signup/login. Start without entering a nickname; optional nickname editing later. Local UUID identifies installation only, not authenticated server identity. No account recovery promise.
 
 | ID | 이름 | 원본 조작·핵심 | 점수 방향 |
 |---|---|---|---|
 | orbit_snap | 오비트 스냅 | 누르면 원을 돌고 떼면 다음 궤도로 점프 | 통과·정확도 |
-| color_break | 컬러 브레이크 | 좌우 탭으로 아래에서 올라오는 벽의 같은 색 구역 통과 | 통과·연속 콤보 |
+| color_break | 컬러 브레이크 | 4색 버튼으로 랜덤 배치된 컬러 벽 통과, 무제한·5회 미스 종료 | 통과·연속 콤보 |
 | twin_tap | 트윈 탭 | 두 레인의 내려오는 점을 한/두 손가락으로 처리 | 타이밍·동시 성공 |
 | line_surf | 라인 서프 | 누르면 선 위를 달리고 떼면 점프, 틈과 장애물 통과 | 거리 |
 | pocket_pulse | 포켓 펄스 | 중심에서 퍼지는 파동과 목표 링 크기가 같을 때 탭 | 정확도·콤보 |
@@ -25,16 +25,15 @@ Exact numbers below are initial playable tuning, not a claim that the user fixed
 - Background/pause freezes time, cancels held input, requires explicit resume. Unfinished rounds abandoned to home do not save scores.
 - Completed rounds save best score locally. Scores do not upload retroactively by default.
 
-## Color Break v1
+## Color Break v2 (v0.11.0)
 
-- Tap the left/right half to select one of two lanes; holding/moving/additional fingers do not repeat input. First valid tap starts the clock.
-- One wall rises from below. Match the player's current color/number at the crossing line; the two lanes always have distinct colors and exactly one matches.
-- Three colors carry redundant numbers (1/2/3). Player and wall colors are refreshed together for each new wall.
-- Hit: 100 points plus 10 per previous consecutive success, capped at +100. Miss: lose one of three lives and reset combo. Best combo is retained for the result screen.
-- Wall travel time: 2.4 seconds initially, decreasing by .022 per elapsed second, minimum 1.1 seconds. A .28-second feedback/recovery separates walls.
-- 60 active seconds maximum. Time-limit termination takes precedence over a crossing exactly at 60 seconds. No score is awarded on tap alone; one judgement per wall.
-- Pause freezes timer and wall/recovery. Returning from background needs explicit resume, without lane movement on the resume tap. Finished games reject input.
-- Home, instructions, pause/retry, result and local records share the native shell. Online ranking uses the shared Cloudflare leaderboard; ads unchanged.
+- Four lanes. Each wall contains all four colors in a shuffled permutation, with exactly one match for the player's target color. Every wall changes the arrangement and target. Colors also have distinct shapes and text labels.
+- Open directly from the game card; no start dialog. The first bottom color-pad tap starts play. Tap the matching pad for every wall; input on the score/runway and holding a pad do not select new walls. Independent pointer-downs support alternating two fingers.
+- No time limit. Exactly five misses end the run. A correct crossing gives 100 points plus 10 per previous consecutive success (bonus capped at 100); a miss removes one life and resets combo. Score saturates safely at 1,000,000,000 without ending play.
+- Wall travel starts at 1.85 seconds and continuously accelerates as `.35 + 1.5 / (1 + judgedWalls / 30)`, with a .10-second feedback transition. Difficulty never has a one-minute cutoff. New walls require a fresh selection, preventing unattended passive scores.
+- Pause freezes wall position, selected pad and feedback. Background/rotation returns to an explicit custom pastel pause sheet. A resume button does not count as lane input. Results use a matching custom sheet with retry, ranking and home actions.
+- The bright board uses the full available portrait height, moves score/lives to the top and places four colored controls above the separate banner. Small/landscape windows fit the complete board with a 480px minimum logical height.
+- Shared `color_break / normal / points` IDs stay stable. Migration `0003_color_break_endless.sql` raises only this game's server validation ceiling from 100,000 to 1,000,000,000, preserving rows and epochs. Old test records are not automatically deleted. Deploy this migration before relying on long-run online scores.
 
 ## Twin Tap v1
 
@@ -98,7 +97,7 @@ play-count analytics.
 
 ## Integration and lifecycle v1
 
-- Every game board fits both the available width and height against the same 360×520 logical canvas. Extra space is letterboxed; game touch coordinates remain owned by each View and never include the banner strip.
+- Five game boards fit a 360×520 logical canvas. Color Break v2 fits a 360×480 minimum canvas that extends to full portrait height. Game touch coordinates remain owned by each View and never include the banner strip.
 - Orientation/screen-size changes keep the current Activity and engine, cancel any held pointer, pause the round and require an explicit resume tap. The adaptive test banner is destroyed and loaded again for the new dimensions.
 - Process/Activity recreation does not pretend to restore an in-memory engine. An active run is deliberately abandoned without saving a partial score, the user is told why, and a same-game restart is offered. Home, rankings and settings destinations restore safely; a previously committed result opens local records.
 - Installation ID creation, terminal game results and record deletion are synchronously committed. Nickname and vibration preferences remain non-critical asynchronous settings writes.
@@ -109,7 +108,7 @@ play-count analytics.
 Home, rankings, settings and result pages use a bright cream/lilac/peach palette,
 dark readable text, rounded cards, native ripple feedback and selected icon tabs.
 Game illustration and profile artwork is drawn as native vectors on Canvas.
-Game boards retain their dark, high-contrast playfield and original behavior.
+Five game boards retain their dark playfield. Color Break v2 adds a full pastel board and custom pause/result sheets in v0.11.0.
 Two-column game cards collapse to one column on narrow screens or large text.
 Ranking podiums use only the returned real entries; empty/offline/error states
 must remain explicit rather than showing fabricated competitors.
