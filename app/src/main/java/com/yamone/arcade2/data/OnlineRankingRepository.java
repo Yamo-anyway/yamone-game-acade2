@@ -44,7 +44,7 @@ public final class OnlineRankingRepository {
     public void initialize() {
         if (!store.rankingInitialized()) {
             queueCurrentBests();
-            store.rankingInitialized();
+            store.markRankingInitialized();
         }
         syncPending();
     }

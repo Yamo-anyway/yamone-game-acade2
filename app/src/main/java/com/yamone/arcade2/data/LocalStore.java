@@ -52,7 +52,7 @@ public final class LocalStore {
     public boolean onlineDeletePending() { return prefs.getBoolean("ranking_delete_pending", false); }
     public void onlineDeleteCompleted() { prefs.edit().remove("ranking_delete_pending").commit(); }
     public boolean rankingInitialized() { return prefs.getBoolean("ranking_initialized", false); }
-    public void rankingInitialized() { prefs.edit().putBoolean("ranking_initialized", true).commit(); }
+    public void markRankingInitialized() { prefs.edit().putBoolean("ranking_initialized", true).commit(); }
 
     public void clearScores() {
         SharedPreferences.Editor edit = prefs.edit();
