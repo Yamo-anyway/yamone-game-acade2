@@ -40,7 +40,8 @@ leaderboard and advances its epoch. Play receipts and aggregate history remain.
 
 The v0.9.0 client keeps play events offline if it temporarily reaches the older
 Worker, while the legacy best-score API continues retrying independently.
-# Color Break v0.11.0 score ceiling
+
+## Color Break v0.11.0 score ceiling
 
 After pulling the latest main, apply the additive migration from this directory:
 

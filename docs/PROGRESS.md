@@ -14,7 +14,7 @@ Current stage: **M11 / v0.11.0**. Repository is the source of truth for subseque
 | M08 | Shared Cloudflare game-by-game online ranking | complete; 115 core + 22 integration checks and Android CI passed |
 | M09 | Play analytics, remote catalog, ranking reset and admin dashboard | complete; production migration/deployment, live smoke test and Android CI passed |
 | M10 | Pastel home, rankings and settings redesign | complete; Android lint/APK, native emulator UI and visual review passed |
-| M11 | Four-lane endless pastel Color Break | implemented; Android build and native play-screen QA pending |
+| M11 | Four-lane endless pastel Color Break | complete; Android lint/APK and native play-screen QA passed; D1 ceiling migration pending |
 
 ## M11 implementation
 
@@ -37,7 +37,18 @@ server score ceiling to 1,000,000,000. It retains existing leaderboard rows and 
 This workspace has no Cloudflare deployment connection; production migration is
 pending owner execution. Scores above 100,000 cannot upload until it is applied;
 the client retains them locally and in its retry queue. No test data was sent online.
-Exact-commit Android CI and screenshot review pending.
+GitHub Actions run **36384312712**, exact code commit
+**50ee2489f46496bb2dcc5d12ec7126d64d70c939**: **SUCCESS**. Engine/integration/
+operations/contrast checks, Android lint and both APK assemblies passed.
+Android 10 Pixel 2 emulator passed at 411dp/font 1.0 and 320dp/font 1.3.
+Actual pad dispatch selects all four lanes; score-area taps do not start play.
+Native pause freezes time, accelerated deterministic wall advancement exercises
+the result flow, one terminal result increments play count exactly once, identity
+survives, and retry restores zero score/five lives without an entry popup.
+Reviewed native ready, playing, custom pause and result screenshots, including
+the compact/large-text board and scrollable result sheet. No physical-device
+rhythm feel, live score upload or ad rendering is claimed.
+APK ZIP SHA-256: `6f265e05a8d731ae60fc761e6aa912544aafa28aa1cf35ce35e9f71f3e04cbdc`.
 
 ## M10 implementation
 
