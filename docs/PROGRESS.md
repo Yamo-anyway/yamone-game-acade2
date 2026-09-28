@@ -26,11 +26,13 @@ profile, haptics and data controls; destructive deletion still needs confirmatio
 Gameplay engines, dark game boards, IDs, catalog sync and scoring are unchanged.
 Menus select a one-column game layout on narrow screens or larger font settings.
 
-Local checks: 115 engine checks, 29 integration checks, Worker operations tests
-and whitespace checks passed. Added an offline-only emulator instrumentation
+Local checks: 115 engine checks, 29 integration checks, 10 menu text-contrast
+checks, Worker operations tests and whitespace checks passed. Added an offline-only emulator instrumentation
 runner for native navigation and screenshots at standard and large-text sizes.
 Ranking names/scores in screenshot fixtures are test-only, never shipped in the
-app or uploaded to production. Exact-commit Android CI and screenshots pending.
+app or uploaded to production. Initial Android lint caught an API-27-only theme
+attribute; removed it and retained the compatible runtime system-bar flags.
+Final exact-commit Android CI and screenshots pending.
 
 ## M09 implemented
 

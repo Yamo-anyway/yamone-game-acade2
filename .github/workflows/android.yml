@@ -34,6 +34,8 @@ jobs:
         run: bash scripts/check-integration.sh
       - name: Test ranking operations service
         run: bash scripts/test-operations.sh
+      - name: Check menu text contrast
+        run: bash scripts/check-menu-theme.sh
       - name: Lint and build debug APK
         run: gradle --no-daemon :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
       - uses: actions/upload-artifact@v4
@@ -55,6 +57,7 @@ jobs:
         with:
           api-level: 29
           arch: x86_64
+          profile: pixel_2
           disable-animations: true
           script: bash scripts/capture-ui.sh
       - uses: actions/upload-artifact@v4

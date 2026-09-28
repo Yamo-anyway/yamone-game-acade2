@@ -29,6 +29,10 @@ public final class UiSmokeInstrumentation extends Instrumentation {
         try {
             activity = startActivitySync(new Intent(getTargetContext(), MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             waitForIdleSync();
+            int widthDp = activity.getResources().getConfiguration().screenWidthDp;
+            float fontScale = activity.getResources().getConfiguration().fontScale;
+            if ("standard".equals(scenario) && widthDp < 360) throw new AssertionError("Standard device too narrow: " + widthDp);
+            if ("large-text".equals(scenario) && (widthDp > 360 || fontScale < 1.25f)) throw new AssertionError("Compact large-text scenario not applied: " + widthDp + "dp, font " + fontScale);
             requireText("오늘도, 가볍게 한 판 ✦"); capture("home");
             runOnMainSync(() -> scroll(activity.getWindow().getDecorView()).fullScroll(View.FOCUS_DOWN));
             capture("home-games");
@@ -47,7 +51,7 @@ public final class UiSmokeInstrumentation extends Instrumentation {
             capture("rankings-fixture");
             runOnMainSync(() -> scroll(activity.getWindow().getDecorView()).fullScroll(View.FOCUS_DOWN)); capture("rankings-list-fixture");
             navigate("홈"); requireText("오늘도, 가볍게 한 판 ✦");
-            result.putString("stream", "UI_SMOKE_OK: " + scenario + " home/settings/rankings offline/empty/populated/navigation\n");
+            result.putString("stream", "UI_SMOKE_OK: " + scenario + " " + widthDp + "dp, font " + fontScale + " home/settings/rankings offline/empty/populated/navigation\n");
             finish(Activity.RESULT_OK, result);
         } catch (Throwable error) {
             result.putString("stream", "UI_SMOKE_FAILED: " + android.util.Log.getStackTraceString(error));

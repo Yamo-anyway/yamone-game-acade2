@@ -12,11 +12,13 @@ capture() {
   adb shell am instrument -w -e scenario "$1" com.yamone.arcade2.test/com.yamone.arcade2.UiSmokeInstrumentation | tee "ui-preview/$1.log"
   grep -q 'UI_SMOKE_OK' "ui-preview/$1.log"
 }
-adb shell wm size 1080x2400
+adb shell wm size reset
 adb shell wm density 420
+adb shell wm size
+adb shell wm density
 capture standard
-adb shell wm size 720x1280
-adb shell wm density 320
+adb shell wm density 540
 adb shell settings put system font_scale 1.3
+adb shell wm density
 capture large-text
 adb pull /sdcard/Android/data/com.yamone.arcade2/files/ui-preview/. ui-preview/

@@ -26,12 +26,12 @@ public final class ArcadeArt extends View {
     }
     public static int accent(GameId game) {
         return switch (game) {
-            case ORBIT_SNAP -> 0xFF3976AC;
-            case COLOR_BREAK -> 0xFFBC4770;
-            case TWIN_TAP -> 0xFF247C69;
-            case LINE_SURF -> 0xFF9D612C;
-            case POCKET_PULSE -> 0xFF7958B3;
-            case STACK_SLICE -> 0xFF237C86;
+            case ORBIT_SNAP -> 0xFF306C9F;
+            case COLOR_BREAK -> 0xFFAE3F67;
+            case TWIN_TAP -> 0xFF206F5F;
+            case LINE_SURF -> 0xFF8E5628;
+            case POCKET_PULSE -> 0xFF6F4EA8;
+            case STACK_SLICE -> 0xFF1E707A;
         };
     }
     public static int tint(GameId game) {

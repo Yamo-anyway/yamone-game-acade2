@@ -47,7 +47,7 @@ import java.util.List;
 import java.util.UUID;
 
 public final class MainActivity extends Activity {
-    private static final int BG = 0xFFFAF8FF, PANEL = 0xFFFFFFFF, MINT = 0xFF7754AD, TEXT = 0xFF302A43, MUTED = 0xFF746B83;
+    private static final int BG = 0xFFFAF8FF, PANEL = 0xFFFFFFFF, MINT = 0xFF7754AD, TEXT = 0xFF302A43, MUTED = 0xFF6D627D;
     private static final int LILAC = 0xFFF0E9FC, BORDER = 0xFFEDE7F4, PINK = 0xFFAC416D, GAME_BG = 0xFF090E22;
     private static final String STATE_SCREEN = "screen", STATE_GAME = "active_game", STATE_ACTIVE_RUN = "active_run";
     private LinearLayout root, nav;
@@ -138,17 +138,19 @@ public final class MainActivity extends Activity {
         profile.addView(new ArcadeArt(this, ArcadeArt.Symbol.AVATAR, MINT), new FrameLayout.LayoutParams(dp(46), dp(46), Gravity.CENTER));
         profile.setContentDescription("내 프로필과 설정"); profile.setFocusable(true); profile.setOnClickListener(v -> settings());
         brand.addView(profile, new LinearLayout.LayoutParams(dp(52), dp(52))); p.addView(brand); gap(p, 24);
-        p.addView(text("오늘도, 가볍게 한 판 ✦", 26, TEXT)); gap(p, 7);
+        p.addView(text("오늘도, 가볍게 한 판 ✦", compactCards() ? 23 : 26, TEXT)); gap(p, 7);
         p.addView(text("손끝에서 시작되는 기분 좋은 60초", 13, MUTED)); gap(p, 20);
         if (!visibleGames.isEmpty()) {
             LinearLayout featured = panel(0xFFF0E7FF, 22); featured.setBackground(gradient(0xFFECE3FF, 0xFFFFE9F1, 28));
             featured.addView(chip("✦  오늘의 추천", MINT, 0xBFFFFFFF)); gap(featured, 8);
-            LinearLayout scene = row(); LinearLayout intro = column();
+            LinearLayout scene = compactCards() ? column() : row(); LinearLayout intro = column();
             intro.addView(text(featuredGame.title, 23, TEXT)); gap(intro, 7);
             intro.addView(text(featuredGame.tagline, 12, MUTED)); gap(intro, 12);
             intro.addView(text("MY BEST  " + number(store.best(featuredGame)), 11, MINT));
-            scene.addView(intro, new LinearLayout.LayoutParams(0, -2, 1));
-            scene.addView(new ArcadeArt(this, featuredGame, true), new LinearLayout.LayoutParams(dp(100), dp(120)));
+            scene.addView(intro, compactCards() ? new LinearLayout.LayoutParams(-1, -2) : new LinearLayout.LayoutParams(0, -2, 1));
+            LinearLayout.LayoutParams featuredArt = new LinearLayout.LayoutParams(dp(compactCards() ? 80 : 100), dp(compactCards() ? 74 : 120));
+            featuredArt.gravity = Gravity.CENTER_HORIZONTAL;
+            scene.addView(new ArcadeArt(this, featuredGame, true), featuredArt);
             featured.addView(scene); gap(featured, 8);
             featured.addView(button("지금 플레이  →", MINT, PANEL, () -> instructions(featuredGame)));
             p.addView(featured); gap(p, 25);
@@ -284,10 +286,10 @@ public final class MainActivity extends Activity {
         gap(p, 18);
         LinearLayout local = panel(ArcadeArt.tint(selectedGame), 20); LinearLayout record = row(); LinearLayout recordText = column();
         recordText.addView(text(selectedGame.title + " · 내 최고기록", 12, ArcadeArt.accent(selectedGame))); gap(recordText, 8);
-        recordText.addView(text(store.plays(selectedGame) == 0 ? "첫 기록을 기다려요" : number(store.best(selectedGame)) + "점", 25, TEXT)); gap(recordText, 5);
+        recordText.addView(text(store.plays(selectedGame) == 0 ? "첫 기록을 기다려요" : number(store.best(selectedGame)) + "점", compactCards() ? 20 : 25, TEXT)); gap(recordText, 5);
         recordText.addView(text("이 기기에서 " + number(store.plays(selectedGame)) + "회 플레이", 11, MUTED));
         record.addView(recordText, new LinearLayout.LayoutParams(0, -2, 1));
-        record.addView(new ArcadeArt(this, selectedGame, true), new LinearLayout.LayoutParams(dp(64), dp(76))); local.addView(record);
+        if (!compactCards()) record.addView(new ArcadeArt(this, selectedGame, true), new LinearLayout.LayoutParams(dp(64), dp(76))); local.addView(record);
         p.addView(local); gap(p, 20);
         LinearLayout online = column(); online.setTag("onlineRanking");
         messageCard(online, "기록을 모으고 있어요", "온라인 순위를 불러오는 중…", ArcadeArt.Symbol.SPARKLE);
@@ -369,10 +371,10 @@ public final class MainActivity extends Activity {
         LinearLayout p = page("settings");
         pageTitle(p, "MY LITTLE ARCADE", "나의 작은 취향", "내게 꼭 맞는 플레이를 준비해요.", ArcadeArt.Symbol.SETTINGS);
         LinearLayout profile = panel(LILAC, 20); profile.setBackground(gradient(0xFFEDE5FC, 0xFFFFECF3, 28));
-        LinearLayout identity = row(); identity.addView(new ArcadeArt(this, ArcadeArt.Symbol.AVATAR, MINT), new LinearLayout.LayoutParams(dp(70), dp(76)));
+        LinearLayout identity = row(); identity.addView(new ArcadeArt(this, ArcadeArt.Symbol.AVATAR, MINT), new LinearLayout.LayoutParams(dp(compactCards() ? 48 : 70), dp(compactCards() ? 56 : 76)));
         LinearLayout greeting = column(); greeting.setPadding(dp(15), 0, 0, 0);
         greeting.addView(text("반가워요!", 12, MINT)); gap(greeting, 4);
-        TextView nickname = text(store.nickname() + " 님", 22, TEXT); greeting.addView(nickname);
+        TextView nickname = text(store.nickname() + " 님", compactCards() ? 18 : 22, TEXT); nickname.setMaxLines(2); nickname.setEllipsize(android.text.TextUtils.TruncateAt.END); greeting.addView(nickname);
         identity.addView(greeting, new LinearLayout.LayoutParams(0, -2, 1)); profile.addView(identity); gap(profile, 16);
         int plays = 0; for (GameId game : GameId.values()) plays += store.plays(game);
         profile.addView(chip("✦  지금까지 " + number(plays) + "번의 작은 도전", MINT, 0xCCFFFFFF)); p.addView(profile); gap(p, 22);
@@ -412,10 +414,11 @@ public final class MainActivity extends Activity {
     }
     private void pageTitle(LinearLayout page, String eyebrow, String title, String subtitle, ArcadeArt.Symbol symbol) {
         LinearLayout header = row(); LinearLayout words = column(); words.addView(text(eyebrow, 10, MINT)); gap(words, 9);
-        words.addView(text(title, 27, TEXT)); header.addView(words, new LinearLayout.LayoutParams(0, -2, 1));
+        if (!compactCards()) words.addView(text(title, 27, TEXT)); header.addView(words, new LinearLayout.LayoutParams(0, -2, 1));
         ArcadeArt icon = new ArcadeArt(this, symbol, symbol == ArcadeArt.Symbol.TROPHY ? 0xFFAD7932 : MINT);
         icon.setBackground(shape(symbol == ArcadeArt.Symbol.TROPHY ? 0xFFFFF0D9 : LILAC, 22)); icon.setPadding(dp(8), dp(8), dp(8), dp(8));
         header.addView(icon, new LinearLayout.LayoutParams(dp(54), dp(54))); page.addView(header); gap(page, 10);
+        if (compactCards()) { page.addView(text(title, 24, TEXT)); gap(page, 10); }
         page.addView(text(subtitle, 13, MUTED)); gap(page, 24);
     }
     private void section(LinearLayout page, String title, String detail) {
