@@ -16,10 +16,12 @@ import com.yamone.arcade2.core.GameId;
 import com.yamone.arcade2.core.ColorBreakEngine;
 import com.yamone.arcade2.core.OrbitEngine;
 import com.yamone.arcade2.core.TwinTapEngine;
+import com.yamone.arcade2.core.PocketPulseEngine;
 import com.yamone.arcade2.data.LocalStore;
 import com.yamone.arcade2.ui.ColorBreakView;
 import com.yamone.arcade2.ui.OrbitView;
 import com.yamone.arcade2.ui.TwinTapView;
+import com.yamone.arcade2.ui.PocketPulseView;
 import com.yamone.arcade2.data.RankingGateway;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -42,6 +44,7 @@ public final class UiSmokeInstrumentation extends Instrumentation {
             float fontScale = activity.getResources().getConfiguration().fontScale;
             if ("standard".equals(scenario) && widthDp < 360) throw new AssertionError("Standard device too narrow: " + widthDp);
             if ("large-text".equals(scenario) && (widthDp > 360 || fontScale < 1.25f)) throw new AssertionError("Compact large-text scenario not applied: " + widthDp + "dp, font " + fontScale);
+            hiddenSurf();
             requireText("오늘도, 가볍게 한 판 ✦"); capture("home");
             runOnMainSync(() -> scroll(activity.getWindow().getDecorView()).fullScroll(View.FOCUS_DOWN));
             capture("home-games");
@@ -63,7 +66,8 @@ public final class UiSmokeInstrumentation extends Instrumentation {
             colorBreak();
             orbit();
             tapTap();
-            result.putString("stream", "UI_SMOKE_OK: " + scenario + " " + widthDp + "dp, font " + fontScale + " menus, Color Break, Orbit and four-lane Tap Tap input/multitouch/pause/results/records\n");
+            pocketPulse();
+            result.putString("stream", "UI_SMOKE_OK: " + scenario + " " + widthDp + "dp, font " + fontScale + " menus, hidden Line Surf, Color Break, Orbit, Tap Tap and multi-circle Pocket Pulse input/pause/results/records\n");
             finish(Activity.RESULT_OK, result);
         } catch (Throwable error) {
             result.putString("stream", "UI_SMOKE_FAILED: " + android.util.Log.getStackTraceString(error));
@@ -234,6 +238,87 @@ public final class UiSmokeInstrumentation extends Instrumentation {
         navigate("일시정지"); navigate("홈으로");
         if (local.plays(GameId.TWIN_TAP)!=previousPlays+1) throw new AssertionError("Tap Tap abandoned run saved a result");
     }
+    private void hiddenSurf() throws Exception {
+        LocalStore local=new LocalStore(getTargetContext());
+        if(local.visibleGames().contains(GameId.LINE_SURF) || local.visibleGames().size()!=5)
+            throw new AssertionError("Line Surf visible in offline catalog");
+        onMain(()-> {
+            getTargetContext().getSharedPreferences("arcade2_v1",0).edit().putInt("best_line_surf",789).putInt("plays_line_surf",3).commit();
+            java.util.ArrayList<LocalStore.GameConfig> configs=new java.util.ArrayList<>();
+            for(GameId game:GameId.values()) configs.add(new LocalStore.GameConfig(game,true,game==GameId.LINE_SURF,game.ordinal()*10,1,0));
+            local.applyCatalog(configs);
+            if(local.gameEnabled(GameId.LINE_SURF) || local.visibleGames().size()!=5 || local.featuredGame()==GameId.LINE_SURF
+                || local.best(GameId.LINE_SURF)!=789 || local.plays(GameId.LINE_SURF)!=3)
+                throw new AssertionError("Retired game resurrected or old records changed by stale catalog");
+        });
+        navigate("홈");
+        if(findText(activity.getWindow().getDecorView(),"라인 서프")!=null) throw new AssertionError("Line Surf home tile remains");
+        navigate("랭킹");
+        if(findText(activity.getWindow().getDecorView(),"라인 서프")!=null) throw new AssertionError("Line Surf ranking selector remains");
+        navigate("홈");
+    }
+    private void pocketPulse() throws Exception {
+        LocalStore local=new LocalStore(getTargetContext()); int previousPlays=local.plays(GameId.POCKET_PULSE); String playerId=local.playerId();
+        navigate("포켓 펄스");
+        PocketPulseView board=activity.getWindow().getDecorView().findViewWithTag("pulseBoard");
+        if(board==null || board.engine().state()!=PocketPulseEngine.State.READY) throw new AssertionError("Pulse must open without start dialog");
+        PocketPulseEngine engine=board.engine(); capture("pulse-ready");
+        onMain(()-> {
+            tap(board,board.getWidth()/2f,20); tap(board,board.getWidth()/2f,board.getHeight()/2f);
+            if(engine.state()!=PocketPulseEngine.State.READY) throw new AssertionError("Pulse HUD or arena started before pad");
+            pulsePad(board);
+            if(engine.state()!=PocketPulseEngine.State.RUNNING || engine.score()!=0) throw new AssertionError("Pulse first pad judged score");
+        });
+        navigate("일시정지"); requireText("색색의 원도 잠깐 쉬어요.\n준비되면 톡톡, 이어가요!");
+        double pausedAt=engine.elapsed(); int pausedLives=engine.lives(); capture("pulse-pause");
+        onMain(()->pulsePad(board));
+        if(engine.elapsed()!=pausedAt || engine.lives()!=pausedLives) throw new AssertionError("Pulse pause did not freeze input and time");
+        navigate("계속 플레이");
+        onMain(()-> {
+            board.pauseGame(); board.resumeGame();
+            int sizes=0, lives=engine.lives();
+            for(int i=0;i<90;i++) {
+                while(engine.waitingNext()) engine.advance(.002);
+                engine.advance(engine.timeToTarget()); sizes|=1<<engine.pulseCount(); pulsePad(board);
+                if(engine.hits()!=i+1 || engine.lives()!=lives) throw new AssertionError("Pulse native stream failed at "+i);
+            }
+            if((sizes&62)!=62) throw new AssertionError("Pulse never displayed all one-to-five circle counts");
+            while(engine.waitingNext()) engine.advance(.002);
+            engine.advance(engine.timeToTarget());
+            // Holding, duplicate down and move cannot judge another wave.
+            long now=SystemClock.uptimeMillis(); float x=board.getWidth()/2f,y=pulseY(board);
+            MotionEvent down=MotionEvent.obtain(now,now,MotionEvent.ACTION_DOWN,x,y,0);
+            MotionEvent move=MotionEvent.obtain(now,now,MotionEvent.ACTION_MOVE,x,y,0);
+            MotionEvent up=MotionEvent.obtain(now,now,MotionEvent.ACTION_UP,x,y,0);
+            board.dispatchTouchEvent(down); int hits=engine.hits();
+            while(engine.waitingNext()) engine.advance(.002);
+            engine.advance(engine.timeToTarget()); board.dispatchTouchEvent(down); board.dispatchTouchEvent(move);
+            if(engine.hits()!=hits) throw new AssertionError("Pulse held pointer scored next circle");
+            board.dispatchTouchEvent(up); down.recycle(); move.recycle(); up.recycle(); pulsePad(board);
+            if(engine.hits()!=hits+1 || engine.lives()!=lives) throw new AssertionError("Pulse fresh tap did not score");
+            while(engine.waitingNext()) engine.advance(.002);
+            engine.advance(Math.max(0,engine.timeToTarget()-.025));
+            board.pauseGame(); board.invalidate(); // Freeze this real game state for an unambiguous five-circle screenshot.
+        });
+        capture("pulse-five-circles");
+        onMain(()-> { board.resumeGame(); callActivityOnPause(activity); callActivityOnResume(activity); }); waitForIdleSync();
+        if(!board.isPaused() || activity.getWindow().getDecorView().findViewWithTag("pulsePause")==null)
+            throw new AssertionError("Pulse foreground needs explicit resume");
+        navigate("계속 플레이");
+        onMain(()-> { engine.advance(1000); board.invalidate(); });
+        waitForIdleSync(); Thread.sleep(250); waitForIdleSync(); requireText("다섯 번의 미스, 여기까지 잘 달렸어요."); capture("pulse-result");
+        if(local.plays(GameId.POCKET_PULSE)!=previousPlays+1 || local.best(GameId.POCKET_PULSE)<engine.score() || !local.playerId().equals(playerId))
+            throw new AssertionError("Pulse result or identity was not saved correctly");
+        onMain(()->scroll(activity.getWindow().getDecorView()).fullScroll(View.FOCUS_DOWN)); capture("pulse-result-actions");
+        navigate("한 판 더  →");
+        PocketPulseView fresh=activity.getWindow().getDecorView().findViewWithTag("pulseBoard");
+        if(fresh.engine().state()!=PocketPulseEngine.State.READY || fresh.engine().lives()!=5 || fresh.engine().score()!=0)
+            throw new AssertionError("Pulse retry not clean");
+        navigate("일시정지"); navigate("홈으로");
+        if(local.plays(GameId.POCKET_PULSE)!=previousPlays+1) throw new AssertionError("Abandoned pulse saved a terminal result");
+    }
+    private float pulseY(PocketPulseView board) { return board.getHeight()-50*Math.min(board.getWidth()/360f,board.getHeight()/520f); }
+    private void pulsePad(PocketPulseView board) { tap(board,board.getWidth()/2f,pulseY(board)); }
     private float tapTapX(TwinTapView board,int lane) {
         float scale=Math.min(board.getWidth()/360f,board.getHeight()/520f);
         return (board.getWidth()-360*scale)/2+(58.5f+81*lane)*scale;

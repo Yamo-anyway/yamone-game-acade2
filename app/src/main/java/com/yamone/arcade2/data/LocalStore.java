@@ -164,7 +164,7 @@ public final class LocalStore {
     public int bestEpoch(GameId game) { return prefs.getInt("best_epoch_" + game.key, -1); }
     public void markBestEpoch(GameId game, int epoch) { prefs.edit().putInt("best_epoch_" + game.key, Math.max(1, epoch)).commit(); }
     public boolean gameEnabled(GameId game) {
-        return !prefs.getBoolean("catalog_synced", false) || prefs.getBoolean("game_enabled_" + game.key, false);
+        return game.listed() && (!prefs.getBoolean("catalog_synced", false) || prefs.getBoolean("game_enabled_" + game.key, false));
     }
     public List<GameId> visibleGames() {
         List<GameId> games = new ArrayList<>();

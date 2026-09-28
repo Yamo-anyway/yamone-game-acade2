@@ -96,10 +96,11 @@ public final class ArcadeArt extends View {
                 star(c, 81, 27, 6, ink);
             }
             case POCKET_PULSE -> {
-                stroke(0xFFCCB9F0, 6); c.drawCircle(50, 50, 32, paint);
-                stroke(ink, 3); c.drawCircle(50, 50, 22, paint);
-                fill(0xFFF2ABCA); c.drawCircle(50, 50, 11, paint);
-                star(c, 79, 23, 7, ink); fill(0xFFFFFFFF); c.drawCircle(47, 47, 3, paint);
+                int[] colors={0xFFAF456F,0xFF247B65,0xFF397EAF,0xFF7957AC,0xFFAE6A2B};
+                for (int i=4;i>=0;i--) { stroke(colors[i],2); c.drawCircle(50,50,9+i*6,paint); }
+                stroke(ink,1); paint.setPathEffect(new android.graphics.DashPathEffect(new float[]{2,3},0));
+                c.drawCircle(50,50,38,paint); c.drawCircle(50,50,43,paint); paint.setPathEffect(null);
+                star(c,50,50,4,ink);
             }
             case STACK_SLICE -> {
                 block(c, 19, 65, 81, 83, 0xFF8BD3CF); block(c, 24, 43, 76, 61, 0xFFBCA8E8);

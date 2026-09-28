@@ -74,3 +74,17 @@ raises its ceiling to at least 1,000,000,000. The stable key remains
 are retained. Android shows the new name immediately. The admin/catalog title
 and scores above 100,000 need this database migration; no Worker redeploy is
 required. Pending Orbit/Color Break migrations are applied by the same command.
+
+## Pocket Pulse v0.14.0 and Line Surf visibility
+
+After `git pull --ff-only`, run from this directory:
+
+```sh
+npx --yes wrangler@latest d1 migrations apply yamone-games-ranking --remote --config wrangler.toml
+```
+
+`0006_pocket_pulse_endless.sql` raises `pocket_pulse / normal` to 1,000,000,000
+points and disables/not-features `line_surf` only in `yamone_arcade2` placement.
+Shared game IDs, existing rankings, analytics, reset epochs and other apps are
+preserved. The Android app also hides Line Surf when offline or using an older
+catalog. Worker redeployment and secret changes are not required for this migration.

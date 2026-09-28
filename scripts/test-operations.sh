@@ -59,6 +59,20 @@ assert db.execute("SELECT max_score FROM game_catalog WHERE game_id='line_surf' 
 assert db.execute("SELECT COUNT(*) FROM game_catalog").fetchone()[0] == 12
 assert db.execute("SELECT enabled, display_order FROM app_games WHERE app_id='yamone_arcade2' AND game_id='twin_tap'").fetchone() == (1, 30)
 print("PASS Tap Tap rename keeps stable IDs, records, epochs and placement while raising its ceiling")
+db.execute("INSERT INTO leaderboard VALUES ('pulse-existing', 'pocket_pulse', 'normal', 'test', 'KR', 777, '1', '1')")
+db.execute("INSERT INTO leaderboard VALUES ('surf-existing', 'line_surf', 'normal', 'test', 'KR', 888, '1', '1')")
+db.execute("INSERT INTO app_games(app_id,game_id,mode_id,enabled,display_order,featured) VALUES ('standalone','line_surf','normal',1,10,1)")
+pulse = Path("cloudflare/migrations/0006_pocket_pulse_endless.sql").read_text()
+db.executescript(pulse)
+db.executescript(pulse)
+assert db.execute("SELECT max_score, ranking_epoch, local_reset_epoch FROM game_catalog WHERE game_id='pocket_pulse' AND mode_id='normal'").fetchone() == (1000000000,1,0)
+assert db.execute("SELECT enabled, featured FROM app_games WHERE app_id='yamone_arcade2' AND game_id='line_surf'").fetchone() == (0,0)
+assert db.execute("SELECT enabled, featured FROM app_games WHERE app_id='standalone' AND game_id='line_surf'").fetchone() == (1,1)
+assert db.execute("SELECT COUNT(*) FROM app_games WHERE app_id='yamone_arcade2' AND enabled=1").fetchone()[0] == 5
+assert db.execute("SELECT best_score FROM leaderboard WHERE player_id='pulse-existing'").fetchone()[0] == 777
+assert db.execute("SELECT best_score FROM leaderboard WHERE player_id='surf-existing'").fetchone()[0] == 888
+assert db.execute("SELECT COUNT(*) FROM game_catalog").fetchone()[0] == 12
+print("PASS Pulse ceiling and app-only Line Surf hiding retain other apps, IDs, records and epochs")
 PY
 
 node --input-type=module <<'JS'

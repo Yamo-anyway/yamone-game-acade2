@@ -2,15 +2,15 @@
 
 Source: user's 2026-09-24 six-concept image “초간단 아케이드 게임 아이디어 보드.png”, inspected directly. User asked for hourly app development in this exact repository.
 
-One Android app, six quick games. One or two fingers; approximately 60-second rounds except endless five-miss Color Break, Orbit Snap and Tap Tap; immediate retry. Native Java/Canvas/View implementation. No signup/login. Start without entering a nickname; optional nickname editing later. Local UUID identifies installation only, not authenticated server identity. No account recovery promise.
+One Android app, five visible games; the retired Line Surf engine/ID is retained for history. One or two fingers; approximately 60-second rounds except endless five-miss Color Break, Orbit Snap, Tap Tap and Pocket Pulse; immediate retry. Native Java/Canvas/View implementation. No signup/login. Start without entering a nickname; optional nickname editing later. Local UUID identifies installation only, not authenticated server identity. No account recovery promise.
 
 | ID | 이름 | 원본 조작·핵심 | 점수 방향 |
 |---|---|---|---|
 | orbit_snap | 오비트 스냅 | 자동 회전하는 점을 목표 구간에서 탭, 무제한·5회 미스 종료 | 타이밍·정확도 |
 | color_break | 컬러 브레이크 | 4색 버튼으로 랜덤 배치된 컬러 벽 통과, 무제한·5회 미스 종료 | 통과·연속 콤보 |
 | twin_tap | 탭탭 | 4색 레인에서 내려오는 노트를 한/두 손가락으로 탭, 무제한·5회 미스 종료 | 타이밍·동시 성공 |
-| line_surf | 라인 서프 | 누르면 선 위를 달리고 떼면 점프, 틈과 장애물 통과 | 거리 |
-| pocket_pulse | 포켓 펄스 | 중심에서 퍼지는 파동과 목표 링 크기가 같을 때 탭 | 정확도·콤보 |
+| line_surf | 라인 서프 (목록 제외) | 기존 기록·ID 보존 | 거리 |
+| pocket_pulse | 포켓 펄스 | 1~5개 컬러 동심원을 두 점선 사이에서 연속 탭, 무제한·5회 미스 종료 | 정확도·콤보 |
 | stack_slice | 스택 슬라이스 | 좌우 스와이프로 블록을 잘라 균형 유지, 과도한 기울기 종료 | 적층·균형 |
 
 Exact numbers below are initial playable tuning, not a claim that the user fixed every threshold. Rule revisions are documented per game while the user's shared game IDs stay stable.
@@ -47,7 +47,7 @@ Exact numbers below are initial playable tuning, not a claim that the user fixed
 - Pause/background/rotation freezes notes and partial chords and returns to an explicit custom pastel resume sheet. Results include successful rows, double hits, best combo and level. Retry starts with five hearts and zero score. Completed runs retain the shared exactly-once local records and durable online events.
 - Full-height pastel board fits a 360×520 minimum canvas with score/hearts at top, four lanes and four pads above the separate banner. `0005_tap_tap_endless.sql` updates only the server display name and score ceiling; preserves leaderboard rows, play receipts, placement and reset epochs. Production application is separate from app build.
 
-## Line Surf v1
+## Line Surf v1 (retired from this app’s lists in v0.14.0)
 
 - The first press starts the active clock and holds the rider to the line. Releasing an armed press while grounded launches one jump; duplicate release, canceled touch and release without a fresh press cannot jump.
 - The course is deterministic from the run seed and presents one upcoming feature at a time: 58–90px gaps or 34–56px obstacles with 35–50px height. The next feature begins at least 250px beyond the previous end, with extra seeded spacing for reaction time.
@@ -57,14 +57,15 @@ Exact numbers below are initial playable tuning, not a claim that the user fixed
 - 60 active seconds maximum; round completion wins over a collision on the same simulation instant. Pause freezes distance, physics, hazards and time, cancels held input and requires a fresh press after resume. Finished games reject input.
 - Android Canvas draws the deterministic parallax course, gap/obstacle preview, rider height, lives, distance and touch state. Results include distance, clears and jumps; local records use the shared shell.
 
-## Pocket Pulse v1
+## Pocket Pulse v2 (v0.14.0)
 
-- The first tap starts the active clock without judging. Each pulse expands from radius 24 toward one seeded target ring between radius 72 and 130; the target remains fixed until the pulse resolves.
-- Tap error is absolute radius difference. Error ≤4 is PERFECT (200), ≤10 is GREAT (150), and ≤18 is GOOD (100). Each consecutive hit adds 10 per prior success, capped at +100; any miss resets combo.
-- Tapping outside the 18px window immediately misses. Waiting until the wave passes the target by more than 18px also produces exactly one automatic miss. Four misses end the round; taps during the .28-second result/recovery interval are ignored.
-- Expansion speed starts at 72px/s and adds .9px/s per elapsed second, reaching 126px/s at 60 seconds. A new target and wave are generated only after recovery, deterministically from the run seed.
-- 60 active seconds maximum; completion wins over an automatic miss on the same instant. Pause freezes wave radius, recovery and time. The resume tap only resumes the paused view and finished games reject input.
-- Android Canvas draws the pulse, target/tolerance glow, accuracy feedback, lives and combo. Results include hits, PERFECT count and best combo; the shared shell stores a separate local best.
+- No time limit. Enter without a popup; the first bottom pad tap starts without judging. During play, a fresh down on the arena or TAP pad judges only the outermost wave. HUD/margins, holding, move/release/cancel and duplicate pointer downs never judge. Independent pointer downs permit alternating fingers; no five-finger input is required.
+- Concentric waves grow from radius 12 toward radius 108. Two thin dashed circles at radii 100 and 116 mark the inclusive valid band. Radius error ≤2/≤5/≤8 awards PERFECT 200/GREAT 150/GOOD 100 plus 10 per prior consecutive success (bonus capped at 100). Score saturates at 1,000,000,000 without ending the run.
+- Five hearts. Early taps or passing the outer dashed guide remove one heart and reset combo. The fifth miss ends play. A .07s input lock prevents one touch/automatic miss from judging two waves; remaining circles continue expanding. No passive points.
+- Wave capacity rises after 12/28/48/72 judged circles: 1→2→3→4→5. Spawn interval is `(108-12)/speed/capacity`, with an immediate .07s restart after the last circle resolves. The stream never exceeds its capacity; newer circles stay inside older circles. Five seeded colors exclude colors already onscreen and the previously spawned color, so adjacent and concurrent waves are distinct.
+- Speed is `60 + 72*n/(n+80)` radius units per second for `n` judged circles. It keeps increasing toward 132, without a one-minute ceiling. Timing gets progressively tighter while the band stays legible. First target takes 1.6 seconds; a five-circle stream approaches .145s between targets.
+- Full-height pastel board fits a minimum 360×520 logical canvas, with top score/five hearts, level/circle-capacity/speed, colored rings with pearl markers, dashed tolerance band, combo and one generous TAP pad above the separate banner. Custom pause/results and explicit foreground resume preserve all active waves and existing exactly-once records.
+- Keep `pocket_pulse / normal / points`. Migration `0006_pocket_pulse_endless.sql` raises its ceiling and sets only `yamone_arcade2`'s `line_surf` placement to disabled/not featured. The app also excludes Line Surf locally, including offline or stale server catalogs. Existing IDs, scores, receipts, epochs and other apps are retained; server data changes require owner execution.
 
 ## Stack Slice v1
 
@@ -99,18 +100,18 @@ play-count analytics.
 
 ## Integration and lifecycle v1
 
-- Three game boards fit a 360×520 logical canvas. Color Break v2 fits a 360×480 minimum, Orbit Snap v2 a 360×500 minimum and Tap Tap v2 a 360×520 minimum, all extending to full portrait height. Game touch coordinates remain owned by each View and never include the banner strip.
+- Legacy game boards fit a 360×520 logical canvas. Color Break v2 fits a 360×480 minimum, Orbit Snap v2 a 360×500 minimum and Tap Tap v2 and Pocket Pulse v2 a 360×520 minimum, all extending to full portrait height. Game touch coordinates remain owned by each View and never include the banner strip.
 - Orientation/screen-size changes keep the current Activity and engine, cancel any held pointer, pause the round and require an explicit resume tap. The adaptive test banner is destroyed and loaded again for the new dimensions.
 - Process/Activity recreation does not pretend to restore an in-memory engine. An active run is deliberately abandoned without saving a partial score, the user is told why, and a same-game restart is offered. Home, rankings and settings destinations restore safely; a previously committed result opens local records.
 - Installation ID creation, terminal game results and record deletion are synchronously committed. Nickname and vibration preferences remain non-critical asynchronous settings writes.
-- CI checks all six rules engines, six-game unlock state, width/height board fitting, test-only banner policy, no interstitial/rewarded ad classes, disabled release ads, live ranking contract/retry markers and local-record durability before Android lint/APK assembly.
+- CI checks all six rules engines, six stable IDs/five visible games, width/height board fitting, test-only banner policy, no interstitial/rewarded ad classes, disabled release ads, live ranking contract/retry markers and local-record durability before Android lint/APK assembly.
 
 ## Menu visual language (v0.10.0)
 
 Home, rankings, settings and result pages use a bright cream/lilac/peach palette,
 dark readable text, rounded cards, native ripple feedback and selected icon tabs.
 Game illustration and profile artwork is drawn as native vectors on Canvas.
-Three game boards retain their dark playfield. Color Break v2 (v0.11.0), Orbit Snap v2 (v0.12.0) and Tap Tap v2 (v0.13.0) use full pastel boards and custom pause/result sheets.
+Stack Slice and the retired Line Surf retain their dark playfield. Color Break v2 (v0.11.0), Orbit Snap v2 (v0.12.0), Tap Tap v2 (v0.13.0) and Pocket Pulse v2 (v0.14.0) use full pastel boards and custom pause/result sheets.
 Two-column game cards collapse to one column on narrow screens or large text.
 Ranking podiums use only the returned real entries; empty/offline/error states
 must remain explicit rather than showing fabricated competitors.

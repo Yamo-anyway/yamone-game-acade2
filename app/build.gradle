@@ -7,8 +7,8 @@ android {
         applicationId 'com.yamone.arcade2'
         minSdk 26
         targetSdk 36
-        versionCode 13
-        versionName '0.13.0'
+        versionCode 14
+        versionName '0.14.0'
         testInstrumentationRunner 'com.yamone.arcade2.UiSmokeInstrumentation'
         manifestPlaceholders = [admobAppId: 'ca-app-pub-3940256099942544~3347511713']
     }

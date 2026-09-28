@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.14.0 — 2026-09-28
+
+- Hide Line Surf from the home/ranking selectors, including stale/offline catalogs, while preserving its records and shared ID.
+- Rebuild Pocket Pulse as endless concentric colored waves: progressively 1–5 simultaneous circles, increasing speed, thin dashed inner/outer timing guides and five misses.
+- Add pastel full-height gameplay, inline start, multi-pointer fresh-down input, five hearts, combo and custom pause/result sheets.
+- Preserve ranking/analytics identity and prepare an app-scoped visibility/score-ceiling migration.
+- Cover timing edges, color separation, multiring ordering, ten-minute play, pause, score bounds, terminal input and legacy-record visibility.
+
 ## 0.13.0 — 2026-09-28
 
 - Rename Twin Tap to 탭탭 (Tap Tap) while preserving the shared `twin_tap` ID and existing records.

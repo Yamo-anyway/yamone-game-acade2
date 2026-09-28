@@ -15,11 +15,13 @@ game across integrated and standalone packages.
 | Orbit Snap | `orbit_snap` | `normal` | `points` |
 | Color Break | `color_break` | `normal` | `points` |
 | Tap Tap (탭탭, formerly Twin Tap) | `twin_tap` | `normal` | `points` |
-| Line Surf | `line_surf` | `normal` | `points` |
+| Line Surf (hidden in Arcade 2 v0.14.0) | `line_surf` | `normal` | `points` |
 | Pocket Pulse | `pocket_pulse` | `normal` | `points` |
 | Stack Slice | `stack_slice` | `normal` | `points` |
 
 These game IDs remain unchanged if games move between standalone and integrated apps.
+
+Migration `0006_pocket_pulse_endless.sql` disables only Arcade 2’s Line Surf placement and raises Pocket Pulse’s ceiling to 1,000,000,000. It preserves shared IDs, ranking/reset epochs, old scores and play receipts. The current client hides Line Surf even with an offline/stale catalog.
 
 ## Submit a best score
 

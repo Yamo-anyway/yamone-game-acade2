@@ -361,80 +361,95 @@ public final class CoreTests {
         at = ready.elapsed(); ready.press(); ready.advance(Double.NaN); ready.advance(Double.POSITIVE_INFINITY); ready.advance(-1); ready.advance(0);
         check(ready.elapsed() == at, "surf invalid time deltas ignored");
     }
-    private static void pulseToRadius(PocketPulseEngine e, double desired) {
-        int watchdog = 400000;
-        while (e.state() == PocketPulseEngine.State.RUNNING && !e.waitingNext()
-            && e.radius() < desired && watchdog-- > 0) e.advance(.0005);
-        if (watchdog <= 0) throw new AssertionError("Could not reach pulse radius");
+    private static void pulseReady(PocketPulseEngine e) {
+        int limit=1000;
+        while (e.waitingNext() && e.state()==PocketPulseEngine.State.RUNNING && limit-->0) e.advance(.002);
+        if (limit<=0) throw new AssertionError("pulse spawn stalled");
     }
-    private static void pulsePerfect(PocketPulseEngine e) {
-        pulseToRadius(e, e.targetRadius());
-        if (e.state() == PocketPulseEngine.State.RUNNING && !e.waitingNext()) e.tap();
+    private static void pulseToRadius(PocketPulseEngine e,double radius) {
+        pulseReady(e); e.advance(Math.max(0,(radius-e.radius())/e.speed()));
     }
+    private static void pulsePerfect(PocketPulseEngine e) { pulseToRadius(e,e.targetRadius()); e.tap(); }
     private static void pocketPulseTests() {
-        PocketPulseEngine e = new PocketPulseEngine(77), same = new PocketPulseEngine(77);
+        PocketPulseEngine e=new PocketPulseEngine(77), same=new PocketPulseEngine(77);
         e.advance(8);
-        check(e.state() == PocketPulseEngine.State.READY && e.elapsed() == 0 && e.score() == 0, "pulse waits for first tap without passive score");
-        check(e.targetRadius() == same.targetRadius() && e.targetRadius() >= 72 && e.targetRadius() < 130, "pulse seed fixes target inside visible range");
-        e.tap();
-        check(e.state() == PocketPulseEngine.State.RUNNING && e.score() == 0 && e.lives() == 4, "pulse first tap starts without judging");
+        check(e.state()==PocketPulseEngine.State.READY && e.elapsed()==0 && e.score()==0 && e.lives()==5,"pulse ready has five hearts and no passive play");
+        check(e.color(0)==same.color(0) && e.pulseCount()==1,"pulse seed controls initial color");
+        e.tap(); check(e.state()==PocketPulseEngine.State.RUNNING && e.score()==0,"pulse first tap only starts");
         pulsePerfect(e);
-        check(e.score() == 200 && e.hits() == 1 && e.perfects() == 1 && e.combo() == 1
-            && e.feedback() == PocketPulseEngine.Feedback.PERFECT, "pulse matched rings award perfect");
-        int score = e.score(), feedback = e.feedbackId(); e.tap(); e.tap();
-        check(e.score() == score && e.feedbackId() == feedback && e.waitingNext(), "pulse recovery rejects duplicate taps");
-
-        e.advance(PocketPulseEngine.RECOVERY);
-        pulseToRadius(e, e.targetRadius() - 8); e.tap();
-        check(e.score() == 360 && e.greats() == 1 && e.combo() == 2 && e.feedback() == PocketPulseEngine.Feedback.GREAT, "pulse medium error awards great plus combo");
-        e.advance(PocketPulseEngine.RECOVERY);
-        pulseToRadius(e, e.targetRadius() - 14); e.tap();
-        check(e.score() == 480 && e.goods() == 1 && e.combo() == 3 && e.bestCombo() == 3, "pulse wider valid error awards good plus combo");
-        e.advance(PocketPulseEngine.RECOVERY); e.tap();
-        check(e.lives() == 3 && e.score() == 480 && e.combo() == 0 && e.misses() == 1, "pulse early miss costs life and resets combo");
-
-        PocketPulseEngine late = new PocketPulseEngine(4); late.tap();
-        while (late.feedbackId() == 0) late.advance(.01);
-        check(late.feedback() == PocketPulseEngine.Feedback.MISS && late.lives() == 3 && late.misses() == 1, "pulse passing tolerance auto-misses once");
-        int serial = late.pulseSerial(); late.advance(PocketPulseEngine.RECOVERY);
-        check(late.pulseSerial() == serial + 1 && late.radius() >= PocketPulseEngine.MIN_RADIUS
-            && !late.waitingNext(), "pulse recovery creates exactly one new seeded target");
-
-        PocketPulseEngine paused = new PocketPulseEngine(8); paused.tap(); pulsePerfect(paused); paused.advance(.08);
-        double at = paused.elapsed(), radius = paused.radius(), recovery = paused.recoveryRemaining(); int lives = paused.lives();
+        check(e.score()==200 && e.perfects()==1 && e.combo()==1,"pulse centered tap is perfect");
+        int score=e.score(), feedback=e.feedbackId(); e.tap(); e.tap();
+        check(e.score()==score && e.feedbackId()==feedback,"pulse duplicate taps during lockout ignored");
+        pulseToRadius(e,e.targetRadius()-4); e.tap();
+        check(e.score()==360 && e.greats()==1 && e.combo()==2,"pulse great includes combo bonus");
+        pulseToRadius(e,e.targetRadius()-8); e.tap();
+        check(e.score()==480 && e.goods()==1 && e.bestCombo()==3,"pulse inner dashed boundary counts as good");
+        pulseReady(e); e.tap();
+        check(e.lives()==4 && e.score()==480 && e.combo()==0 && e.misses()==1,"pulse early tap costs exactly one heart");
+        PocketPulseEngine edge=new PocketPulseEngine(7); edge.start();
+        pulseToRadius(edge,edge.targetRadius()+8); edge.tap();
+        check(edge.goods()==1 && edge.lives()==5,"pulse outer dashed boundary is inclusive");
+        PocketPulseEngine late=new PocketPulseEngine(4); late.start();
+        late.advance((late.targetRadius()+8-late.radius())/late.speed()+.001);
+        int serial=late.pulseSerial(); late.tap();
+        check(late.misses()==1 && late.lives()==4 && late.pulseSerial()==serial,"pulse automatic overrun and same-instant tap cannot double miss");
+        PocketPulseEngine paused=new PocketPulseEngine(8); paused.start(); pulsePerfect(paused);
+        double at=paused.elapsed(), radius=paused.radius(), lock=paused.recoveryRemaining();
         paused.pause(); paused.advance(30); paused.tap();
-        check(paused.state() == PocketPulseEngine.State.PAUSED && paused.elapsed() == at && paused.radius() == radius
-            && paused.recoveryRemaining() == recovery && paused.lives() == lives, "pulse pause freezes wave/recovery and input");
-        paused.resume(); paused.advance(recovery);
-        check(paused.state() == PocketPulseEngine.State.RUNNING && paused.pulseSerial() == 1, "pulse resume continues pending recovery");
-        PocketPulseEngine ready = new PocketPulseEngine(9); ready.pause(); ready.resume(); ready.advance(9);
-        check(ready.state() == PocketPulseEngine.State.READY && ready.elapsed() == 0, "pulse pause before start preserves ready state");
-
-        PocketPulseEngine failed = new PocketPulseEngine(11); failed.tap(); failed.advance(60);
-        check(failed.state() == PocketPulseEngine.State.FINISHED && failed.lives() == 0 && failed.misses() == 4 && failed.score() == 0, "pulse four unattended waves finish without score");
-        at = failed.elapsed(); failed.tap(); failed.advance(100); failed.pause(); failed.resume();
-        check(failed.elapsed() == at && failed.score() == 0 && failed.state() == PocketPulseEngine.State.FINISHED, "pulse finished state rejects input and time");
-
-        PocketPulseEngine clock = new PocketPulseEngine(13); clock.tap();
-        while (clock.state() != PocketPulseEngine.State.FINISHED) {
-            if (clock.waitingNext()) clock.advance(Math.min(clock.recoveryRemaining(), clock.remaining()));
-            else pulsePerfect(clock);
+        check(paused.elapsed()==at && paused.radius()==radius && paused.recoveryRemaining()==lock,"pulse pause freezes clock waves and lockout");
+        paused.resume(); pulsePerfect(paused);
+        check(paused.hits()==2,"pulse resumes pending spawn after pause");
+        PocketPulseEngine ready=new PocketPulseEngine(9); ready.pause(); ready.resume(); ready.advance(9);
+        check(ready.state()==PocketPulseEngine.State.READY && ready.elapsed()==0,"pulse ready pause does not auto start");
+        PocketPulseEngine failed=new PocketPulseEngine(11); failed.start();
+        for(int i=0;i<4;i++) { pulseReady(failed); failed.tap(); failed.advance(PocketPulseEngine.RECOVERY); }
+        check(failed.state()==PocketPulseEngine.State.RUNNING && failed.lives()==1,"pulse fourth miss retains last heart");
+        pulseReady(failed); failed.tap();
+        check(failed.state()==PocketPulseEngine.State.FINISHED && failed.misses()==5 && failed.score()==0,"pulse fifth miss ends without passive score");
+        at=failed.elapsed(); failed.tap(); failed.advance(100); failed.pause(); failed.resume();
+        check(failed.elapsed()==at && failed.state()==PocketPulseEngine.State.FINISHED,"pulse terminal state rejects all input");
+        PocketPulseEngine clock=new PocketPulseEngine(13); clock.start();
+        int sizes=0, colors=0, previousColor=-1; boolean alternating=true, ordered=true, distinct=true; double slow=clock.speed();
+        for(int i=0;i<4200;i++) {
+            pulseToRadius(clock,clock.targetRadius());
+            sizes|=1<<clock.pulseCount(); colors|=1<<clock.color(0);
+            alternating &= previousColor!=clock.color(0); previousColor=clock.color(0);
+            for(int j=1;j<clock.pulseCount();j++) ordered &= clock.radius(j)<clock.radius(j-1);
+            int visibleColors=0; for(int j=0;j<clock.pulseCount();j++) visibleColors|=1<<clock.color(j);
+            distinct &= Integer.bitCount(visibleColors)==clock.pulseCount();
+            clock.tap();
+            if(clock.hits()!=i+1 || clock.lives()!=5) throw new AssertionError("pulse stream failed at "+i);
         }
-        check(clock.elapsed() == 60 && clock.lives() == 4 && clock.hits() > 40 && clock.perfects() == clock.hits(), "pulse perfect play reaches exact 60 seconds");
-        check(clock.bestCombo() == clock.hits() && clock.score() > clock.hits() * 200, "pulse sustained accuracy builds capped combo bonus");
-        check(clock.speed() > 72 && clock.speed() <= 126, "pulse speed rises within configured bound");
-
-        PocketPulseEngine a = new PocketPulseEngine(123), b = new PocketPulseEngine(123), large = new PocketPulseEngine(123);
-        a.tap(); b.tap(); large.tap();
-        for (int i = 0; i < 600; i++) a.advance(1.0 / 60);
-        for (int i = 0; i < 1200; i++) b.advance(1.0 / 120);
+        check((sizes&62)==62 && clock.maxCircles()==5,"pulse actually grows from one to five simultaneous circles");
+        check(colors==31 && alternating && ordered && distinct,"pulse distinct colors alternate and oldest wave stays outermost");
+        check(clock.elapsed()>600 && clock.score()>100000 && clock.state()==PocketPulseEngine.State.RUNNING,"pulse runs past ten minutes and old ceiling without timer");
+        check(clock.bestCombo()==clock.hits() && clock.score()==clock.hits()*300-550,"pulse long combo capped at 100 per hit");
+        check(clock.speed()>slow && clock.speed()<132 && clock.spawnInterval()>PocketPulseEngine.RECOVERY,"pulse accelerating cadence remains playable and separated");
+        double[] radii=new double[clock.pulseCount()]; for(int i=0;i<radii.length;i++) radii[i]=clock.radius(i);
+        at=clock.elapsed(); clock.pause(); clock.advance(500); clock.tap(); boolean frozen=at==clock.elapsed();
+        for(int i=0;i<radii.length;i++) frozen &= radii[i]==clock.radius(i);
+        check(frozen,"pulse pause freezes every overlapping circle"); clock.resume();
+        try {
+            java.lang.reflect.Field field=PocketPulseEngine.class.getDeclaredField("score"); field.setAccessible(true); field.setInt(clock,PocketPulseEngine.MAX_SCORE-1);
+            pulsePerfect(clock); check(clock.score()==PocketPulseEngine.MAX_SCORE && clock.state()==PocketPulseEngine.State.RUNNING,"pulse score saturates without overflow or ending play");
+        } catch(ReflectiveOperationException ex) { throw new AssertionError(ex); }
+        PocketPulseEngine a=new PocketPulseEngine(123), b=new PocketPulseEngine(123), large=new PocketPulseEngine(123);
+        a.start(); b.start(); large.start();
+        for(int i=0;i<600;i++) a.advance(1.0/60);
+        for(int i=0;i<1200;i++) b.advance(1.0/120);
         large.advance(10);
-        check(a.state() == b.state() && a.lives() == b.lives() && a.misses() == b.misses()
-            && Math.abs(a.elapsed() - b.elapsed()) < .01, "pulse 60Hz and 120Hz deadline consistency");
-        check(large.state() == a.state() && large.lives() == a.lives() && large.misses() == a.misses()
-            && Math.abs(large.elapsed() - a.elapsed()) < .01, "pulse delayed frame cannot skip expired waves");
-        at = ready.elapsed(); ready.tap(); ready.advance(Double.NaN); ready.advance(Double.POSITIVE_INFINITY); ready.advance(-1); ready.advance(0);
-        check(ready.elapsed() == at, "pulse invalid time deltas ignored");
+        check(a.state()==b.state() && a.misses()==b.misses() && Math.abs(a.elapsed()-b.elapsed())<.02,"pulse 60Hz and 120Hz miss consistency");
+        check(large.state()==a.state() && large.misses()==a.misses() && Math.abs(large.elapsed()-a.elapsed())<.02,"pulse delayed frame cannot skip waves");
+        PocketPulseEngine huge=new PocketPulseEngine(8); huge.start(); huge.advance(Double.MAX_VALUE);
+        check(huge.state()==PocketPulseEngine.State.FINISHED && huge.misses()==5 && Double.isFinite(huge.elapsed()),"pulse huge delta safely stops at fifth miss");
+        at=ready.elapsed(); ready.start(); ready.advance(Double.NaN); ready.advance(Double.POSITIVE_INFINITY); ready.advance(-1); ready.advance(0);
+        check(ready.elapsed()==at,"pulse ignores invalid deltas");
+        PocketPulseEngine copyA=new PocketPulseEngine(45), copyB=new PocketPulseEngine(45); copyA.start(); copyB.start(); boolean sameStream=true;
+        for(int i=0;i<100;i++) { pulseToRadius(copyA,108); pulseToRadius(copyB,108); sameStream &= copyA.color(0)==copyB.color(0) && copyA.radius()==copyB.radius(); copyA.tap(); copyB.tap(); }
+        check(sameStream && copyA.score()==copyB.score(),"pulse seed and inputs reproduce color stream");
+        check(!GameId.LINE_SURF.listed() && GameId.fromKey("line_surf")==GameId.LINE_SURF,"line surf hidden while old ID still resolves");
+        int listed=0; for(GameId game:GameId.values()) if(game.listed()) listed++;
+        check(listed==5 && GameId.POCKET_PULSE.listed(),"five games remain in current catalog");
     }
     private static void stackBalancedCut(StackSliceEngine e) {
         int watchdog = 400000;

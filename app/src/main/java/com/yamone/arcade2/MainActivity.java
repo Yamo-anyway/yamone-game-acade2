@@ -191,7 +191,6 @@ public final class MainActivity extends Activity {
         if (isPastelGame(game)) { startGame(game); return; }
         String hint = switch (game) {
             case LINE_SURF -> "1. 화면을 누르고 있으면 선을 타고 달려요.\n2. 틈이나 장애물 앞에서 손을 떼면 점프해요.\n3. 착지한 뒤 다시 누르고, 다음 장애물 앞에서 떼세요.\n\n통과할수록 점수와 연속 보너스가 쌓여요. 3번 부딪히거나 60초가 지나면 종료됩니다.";
-            case POCKET_PULSE -> "1. 화면을 한 번 탭하면 파동이 시작돼요.\n2. 중심에서 커지는 파란 파동이 보라 목표 링과 겹칠 때 탭하세요.\n3. 오차가 작을수록 PERFECT·GREAT·GOOD 점수가 높아져요.\n\n연속 성공하면 콤보 보너스가 쌓여요. 4번 놓치거나 60초가 지나면 종료됩니다.";
             case STACK_SLICE -> "1. 위에서 움직이는 블록의 튀어나온 쪽을 확인하세요.\n2. 잘라낼 면을 향해 왼쪽 또는 오른쪽으로 스와이프하세요.\n3. 남은 부분이 쌓이며, 무게중심이 지지면을 벗어나면 무너져요.\n\n중앙에 가깝게 쌓을수록 균형 보너스가 커져요. 블록당 제한시간이 지나거나 60초가 되면 종료됩니다.";
             default -> "민트 구간에서 탭하세요. 다섯 번 미스하면 종료됩니다.";
         };
@@ -227,8 +226,8 @@ public final class MainActivity extends Activity {
                     "거리 " + engine.distanceMeters() + "m   ·   장애물 통과 " + engine.cleared() + "회   ·   점프 " + engine.jumps() + "회"));
         } else if (game == GameId.POCKET_PULSE) {
             gameView = new PocketPulseView(this, new PocketPulseEngine(System.nanoTime()), store.haptics(), engine ->
-                result(currentRun, game, engine.score(), engine.remaining() == 0,
-                    "성공 " + engine.hits() + "회   ·   PERFECT " + engine.perfects() + "회   ·   최고 콤보 " + engine.bestCombo() + "회"));
+                result(currentRun, game, engine.score(), false,
+                    "성공 " + engine.hits() + "회  ·  PERFECT " + engine.perfects() + "회\n최고 " + engine.bestCombo() + "콤보  ·  LEVEL " + engine.level()));
         } else if (game == GameId.STACK_SLICE) {
             gameView = new StackSliceView(this, new StackSliceEngine(System.nanoTime()), store.haptics(), engine ->
                 result(currentRun, game, engine.score(), engine.remaining() == 0,
@@ -268,9 +267,9 @@ public final class MainActivity extends Activity {
             ? "새 최고기록이 저장됐어요. 인터넷 연결 시 온라인 랭킹에도 반영됩니다."
             : "기기와 온라인 랭킹에는 게임별 최고기록 한 개만 유지됩니다.", 12, MUTED));
     }
-    private static boolean isPastelGame(GameId game) { return game == GameId.COLOR_BREAK || game == GameId.ORBIT_SNAP || game == GameId.TWIN_TAP; }
+    private static boolean isPastelGame(GameId game) { return game == GameId.COLOR_BREAK || game == GameId.ORBIT_SNAP || game == GameId.TWIN_TAP || game == GameId.POCKET_PULSE; }
     private static String sheetTag(GameId game, String suffix) {
-        return (game == GameId.ORBIT_SNAP ? "orbit" : game == GameId.TWIN_TAP ? "tapTap" : "color") + suffix;
+        return (game == GameId.ORBIT_SNAP ? "orbit" : game == GameId.TWIN_TAP ? "tapTap" : game == GameId.POCKET_PULSE ? "pulse" : "color") + suffix;
     }
     private LinearLayout pastelSheet(String tag) {
         if (gameOverlay != null) content.removeView(gameOverlay);
@@ -291,6 +290,7 @@ public final class MainActivity extends Activity {
         card.addView(text("잠깐, 숨 고르기", 25, TEXT)); gap(card, 9);
         String pauseHint = activeGame == GameId.ORBIT_SNAP ? "빙글빙글, 궤도도 잠시 쉬어요.\n준비되면 타이밍을 이어가요!"
             : activeGame == GameId.TWIN_TAP ? "반짝이는 노트도 잠깐 쉬어요.\n준비되면 톡톡, 이어가요!"
+            : activeGame == GameId.POCKET_PULSE ? "색색의 원도 잠깐 쉬어요.\n준비되면 톡톡, 이어가요!"
             : "시간도 컬러도 잠시 멈췄어요.\n준비되면 리듬을 이어가요!";
         card.addView(text(pauseHint, 13, MUTED)); gap(card, 22);
         card.addView(button("계속 플레이", MINT, PANEL, () -> {
@@ -458,7 +458,7 @@ public final class MainActivity extends Activity {
         privacy.addView(text("가입 없이, 나만의 기록", 15, TEXT)); gap(privacy, 8);
         privacy.addView(text("앱마다 별도의 플레이어 ID를 사용해요. 닉네임·국가 코드·게임별 점수와 플레이 횟수를 랭킹 및 통계에 사용합니다. 앱을 삭제하면 기기 기록과 ID는 복구할 수 없어요.", 12, MUTED)); gap(privacy, 18);
         privacy.addView(button("내 기록 초기화", 0xFFFFEDF1, PINK, () -> new AlertDialog.Builder(this)
-            .setTitle("모든 기록을 지울까요?").setMessage("6개 게임의 기기 기록과 이 앱의 온라인 랭킹·플레이 통계를 삭제합니다. 오프라인이면 연결될 때 서버 삭제를 완료합니다. 삭제한 기록은 되돌릴 수 없어요.")
+            .setTitle("모든 기록을 지울까요?").setMessage("숨긴 게임을 포함한 모든 기기 기록과 이 앱의 온라인 랭킹·플레이 통계를 삭제합니다. 오프라인이면 연결될 때 서버 삭제를 완료합니다. 삭제한 기록은 되돌릴 수 없어요.")
             .setPositiveButton("삭제", (d, w) -> {
                 ranking.deleteAllOnline(); store.clearScores(); settings();
                 android.widget.Toast.makeText(this, "기록 삭제 요청을 저장했어요", android.widget.Toast.LENGTH_SHORT).show();
@@ -530,7 +530,8 @@ public final class MainActivity extends Activity {
         if (gameView != null) gameView.setForeground(true);
         if ("game".equals(screen) && ((gameView instanceof ColorBreakView && ((ColorBreakView)gameView).isPaused())
             || (gameView instanceof OrbitView && ((OrbitView)gameView).isPaused())
-            || (gameView instanceof TwinTapView && ((TwinTapView)gameView).isPaused()))) pastelPause();
+            || (gameView instanceof TwinTapView && ((TwinTapView)gameView).isPaused())
+            || (gameView instanceof PocketPulseView && ((PocketPulseView)gameView).isPaused()))) pastelPause();
         if (banner != null) banner.resume();
         if (ranking != null) ranking.syncPending();
     }
