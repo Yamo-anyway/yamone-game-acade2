@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — administrator security hardening
+
+- Replace the shared admin Bearer login and browser credential storage with Cloudflare Access JWT verification; require a configured HTTPS administrator origin, with no fallback on configuration failure.
+- Add per-identity Worker rate limiting, same-origin/CSRF checks, private admin responses, nonce CSP and Access logout/expiry handling. Public game API behavior and D1 schema are unchanged.
+- Ignore Wrangler local secret/state files; pin Worker tooling and add executable security regression tests and an approval-gated rollout/rollback guide. No production deployment or secret change performed.
+
 ## 0.10.0 — 2026-09-28
 
 - Redesign home, rankings, settings and result styling in a cream/lilac/peach palette with rounded cards, clear typography and selected icon navigation.

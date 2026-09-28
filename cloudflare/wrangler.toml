@@ -1,6 +1,21 @@
 name = "yamone-games-ranking-api"
 main = "src/index.js"
 compatibility_date = "2026-09-28"
+workers_dev = true # Public Android ranking URL must stay available.
+preview_urls = false
+
+# Configure before deployment; empty values deliberately disable admin only.
+# These are non-secret identifiers. NEVER add signing/admin secrets here.
+[vars]
+ADMIN_ORIGIN = ""
+ACCESS_TEAM_DOMAIN = ""
+ACCESS_AUD = ""
+
+[[ratelimits]]
+name = "ADMIN_RATE_LIMITER"
+# Reserve a unique account-wide namespace before rollout (not a credential).
+namespace_id = "2026092801"
+simple = { limit = 60, period = 60 }
 
 [[d1_databases]]
 binding = "DB"

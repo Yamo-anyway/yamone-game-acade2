@@ -90,8 +90,13 @@ per-player counters. Other users and unrelated aggregate history are untouched.
 
 ## Administration
 
-`/admin` is served by the Worker. Its APIs require a separate
-`RANKING_ADMIN_SECRET` bearer token. The page shows total starts/completions,
+After the approved hardening rollout, `/admin` and `/v1/admin/*` require a
+Cloudflare Access user session on the configured administrator origin. The
+Worker validates the Access JWT and limits requests by verified identity. API
+requests require `X-Yamone-Admin: 1`; writes also require a matching `Origin`.
+There is no legacy Bearer fallback. See
+[`cloudflare/ADMIN_SECURITY.md`](../cloudflare/ADMIN_SECURITY.md) for configuration
+and pending rollout steps. The page shows total starts/completions,
 unique players, game and country totals; manages game visibility, ordering and
 automatic popularity sort modes; registers new catalog IDs; and resets one
 game/mode ranking with an optional app-local record-reset epoch. Every mutation
