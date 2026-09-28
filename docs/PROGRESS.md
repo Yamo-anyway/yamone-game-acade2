@@ -15,7 +15,7 @@ Current stage: **M12 / v0.12.0**. Repository is the source of truth for subseque
 | M09 | Play analytics, remote catalog, ranking reset and admin dashboard | complete; production migration/deployment, live smoke test and Android CI passed |
 | M10 | Pastel home, rankings and settings redesign | complete; Android lint/APK, native emulator UI and visual review passed |
 | M11 | Four-lane endless pastel Color Break | complete; Android lint/APK and native play-screen QA passed; D1 ceiling migration pending |
-| M12 | Automatic rotating endless pastel Orbit Snap | implementation and local checks complete; exact-commit Android CI pending |
+| M12 | Automatic rotating endless pastel Orbit Snap | complete; Android lint/APK and native play-screen QA passed; D1 ceiling migration pending |
 
 ## M12 implementation
 
@@ -44,7 +44,19 @@ and feedback regions. A further fixture edge case could advance a full turn when
 the live dot was already past the target center but still in the valid window;
 the driver now taps that window directly and resets its real-frame baseline before
 controlled advancement. Main-thread assertion details and logcat are retained.
-Final exact-commit CI is pending.
+Final GitHub Actions run **36387715747**, exact application/test commit
+**d02d3dbb77ec587099d317087e9c4db28e95e416**: **SUCCESS**.
+All 137 engine, 29 integration, operations and 10 menu contrast checks passed,
+along with Android lint and both APK assemblies. Android 10 Pixel 2 emulator
+passed at 411dp/font 1.0 and 320dp/font 1.3. Native tests verify automatic
+rotation, real pad-down events, twenty target hits, ignored score-area/move/up
+input, pause/background recovery, exactly-once local records, stable identity
+and clean retry. The existing Color Break/menu scenarios also pass.
+Reviewed final standard and compact Orbit boards: instructions, ring, feedback
+and controls fit in separate regions. Custom pause/result captures were reviewed;
+large-text sheets retain scrolling. Physical-device rhythm feel, live upload
+and actual ad rendering are not claimed. APK ZIP SHA-256:
+`a4c234659876974b81ae8614eb790d933fc4cb593664c2d45483eb007bbbfd3e`.
 
 Added `0004_orbit_snap_endless.sql` to increase only Orbit's max score to
 1,000,000,000 without deleting rows or changing reset epochs. Production D1
