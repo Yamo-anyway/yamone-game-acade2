@@ -17,7 +17,7 @@ Current stage: **M14 / v0.14.0**. Repository is the source of truth for subseque
 | M11 | Four-lane endless pastel Color Break | complete; Android lint/APK and native play-screen QA passed; D1 migration applied by owner |
 | M12 | Automatic rotating endless pastel Orbit Snap | complete; Android lint/APK and native play-screen QA passed; D1 migration applied by owner |
 | M13 | Four-lane endless pastel Tap Tap | complete; Android lint/APK and native UI QA passed; D1 migration applied by owner |
-| M14 | Endless multicolor Pocket Pulse and hidden Line Surf | implemented; local checks passed; Android CI pending |
+| M14 | Endless multicolor Pocket Pulse and hidden Line Surf | complete; core, lint/APK, native UI and fixed debug signer verified; D1 migration pending |
 
 ## M14 implementation
 
@@ -36,14 +36,33 @@ bounds, pause, frame deltas, exact fifth miss and stable IDs. The native UI runn
 now drives actual Pocket Pulse pad events, repeated/held input, five-circle play,
 foreground recovery, exactly-once storage and retry, and verifies Line Surf stays
 hidden even when a stale catalog marks it enabled/featured while retaining its
-old records. The first exact-commit CI passed Android lint/APK assembly; native UI validation is in progress.
+old records. Initial game-code CI run **36393112647**, commit
+**293a67961f9e60b2285bf63ad8e1bcd85407857d**, passed all checks, Android lint/APK
+and both native UI scenarios.
 APK certificate inspection found the old CI generated a new debug key for every
 runner. Added an explicitly public development-only key for stable future debug
 updates; release signing remains separate. The delivered v0.13.0 certificate is
 `acef1881052e56a5e3276e8e74df62ab5c71a043e7f0ff6a71aa6bcfa4ffe58a`; its original
 private key is unavailable, so in-place updating from that APK is not possible.
 Do not advise uninstalling without explaining local record/identity loss.
-Final fixed-signature APK and exact-commit CI validation are pending.
+Final GitHub Actions run **36393559078**, exact build commit
+**0262d18152ac18cee7b1e4346f3e852abee97ef2**: **SUCCESS**.
+All 157 core, 29 integration, operations and 10 contrast checks passed, along
+with Android lint, debug APK and instrumentation APK assembly. Android 10 Pixel 2
+passed at 411dp/font 1.0 and 320dp/font 1.3. Native tests scored 92 circles through
+actual touch events, observed each 1–5 circle count, rejected held/repeated downs,
+verified explicit lifecycle resume and exactly-once records/retry, and confirmed
+Line Surf remains hidden with its historical records intact under stale catalogs.
+Menu, Color Break, Orbit and Tap Tap regressions also passed. Reviewed standard
+and compact five-circle captures and the scrollable result actions: text, guides,
+circles and controls fit without overlap. No physical-device rhythm feel, live
+ranking submission or live ad display is claimed.
+The final APK's signing certificate matches the committed public test key:
+`09cb96bf0b37d78fd318189f78e49be2735dff62c7a037b1ed149452c8dd6f76`.
+Delivered ZIP contains the APK and Korean installation/data-loss notes; CRC check
+passed. ZIP SHA-256:
+`dda8f522667ecd4f428d044d76f1e609be411e48483e49c099af0b4160e669ef`.
+
 
 Migration `0006_pocket_pulse_endless.sql` is prepared and repeatable; owner
 application is pending. It raises Pocket Pulse's ceiling and hides only Arcade 2's

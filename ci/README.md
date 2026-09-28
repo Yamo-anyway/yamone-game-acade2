@@ -14,3 +14,6 @@ was not included in the old artifacts and is not available here.
 Do not tell testers to uninstall without explaining that this clears their local
 records and installation identity. Server history is not removed by this source
 change. Uninstalling/reinstalling creates a separate player, as before.
+
+Expected APK certificate SHA-256:
+`09cb96bf0b37d78fd318189f78e49be2735dff62c7a037b1ed149452c8dd6f76`.
